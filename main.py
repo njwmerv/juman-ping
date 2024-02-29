@@ -1,181 +1,299 @@
 import pygame
-import os # used to define path to assets
+import os
+
 pygame.font.init()
-pygame.mixer.init() # sound
+pygame.mixer.init()
 
-# Making a window/main surface
-# PYGAME Coordinate System -> origin is top left corner
-# images will be drawn starting from top left
-WIDTH, HEIGHT = 900, 500
+# WINDOW / SCREEN CONSTANTS
+WIDTH, HEIGHT = 1500, 800
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("First Game")
-FPS = 60 # how many times game updates per second
-BORDER = pygame.Rect(WIDTH//2 - 5, 0, 10, 500)
-PAUSE_TIME = 2500
+pygame.display.set_caption("Juman Ping")
+FPS = 60
 
-#COLOURS
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
+# COLOURS
+GREEN = (0, 255, 0)
 RED = (255, 0, 0)
-YELLOW = (255, 255, 0)
+WHITE = (255, 255, 255)
+BLACK = (0,0,0)
 
-#SPACESHIP
-SPACESHIP_WIDTH, SPACESHIP_HEIGHT = 55, 40
-SHIP_VEL = 5
+# FONTS
+DEBUG_FONT = pygame.font.SysFont("arial", 30)
+INTRO_FONT = pygame.font.SysFont("comic sans", 60)
 
-#BULLET
-BULLET_VEL = 7.5
-MAX_BULLETS = 3
+# USER EVENTS
 
-#FONTS
-HEALTH_FONT = pygame.font.SysFont("comicsans", 40)
-WINNER_FONT = pygame.font.SysFont("arial", 150)
+# PHYSICS CONSTANTS
+MAX_GRAVITY_VEL = 50
+GRAVITY_ACC = 10
+JUMP_SPEED = -7.5
 
-#SOUNDS
-BULLET_HIT_SOUND = pygame.mixer.Sound(os.path.join("First Pygame Game","Assets","Grenade+1.mp3"))
-BULLET_FIRE_SOUND = pygame.mixer.Sound(os.path.join("First Pygame Game","Assets","Gun+Silencer.mp3"))
+# Player Constants
+BLUE_WIDTH, BLUE_HEIGHT = 10, 25
+BLUE_VEL = 3
+BLUE_JUMP_TIMER = 6
+BLUE_JUMP_SPEED = -6
+BLUE_JUMP_WINDOW = 30
 
-#USER EVENTS
-YELLOW_HIT = pygame.USEREVENT + 1 # code number for userevents
-RED_HIT = pygame.USEREVENT + 2
+# Platform Constants
+PLATFORM_WIDTH, PLATFORM_HEIGHT = 30, 10
+MAX_PLATFORMS = 1
 
-#IMAGES
-SPACE_BACKGROUND_IMAGE = pygame.transform.scale(pygame.image.load(os.path.join("First Pygame Game","Assets","space.png")), (WIDTH, HEIGHT))
+# Goal Constants
+GOAL_WIDTH, GOAL_HEIGHT = 50, 50
 
-YELLOW_SPACESHIP_IMAGE = pygame.image.load(os.path.join("First Pygame Game","Assets","spaceship_yellow.png")) #could be a string but separator of path is inconsistent
-YELLOW_SPACESHIP = pygame.transform.rotate(pygame.transform.scale(YELLOW_SPACESHIP_IMAGE, (SPACESHIP_WIDTH, SPACESHIP_HEIGHT)), 90) # North is 0
+# Images
+BLUE_PERSON = pygame.transform.scale(pygame.image.load(os.path.join("Assets","blue_person.png")), (BLUE_WIDTH, BLUE_HEIGHT))
+PLATFORM = pygame.transform.scale(pygame.image.load(os.path.join("Assets","platform.png")), (PLATFORM_WIDTH, PLATFORM_HEIGHT))
+FALLING_PLATFORM = pygame.transform.scale(pygame.image.load(os.path.join("Assets","falling_platform.png")), (PLATFORM_WIDTH, PLATFORM_HEIGHT))
+GOAL = pygame.transform.scale(pygame.image.load(os.path.join("Assets","goal_flag.png")), (GOAL_WIDTH,GOAL_HEIGHT))
 
-RED_SPACESHIP_IMAGE = pygame.image.load(os.path.join("First Pygame Game","Assets","spaceship_red.png"))
-RED_SPACESHIP = pygame.transform.rotate(pygame.transform.scale(RED_SPACESHIP_IMAGE, (SPACESHIP_WIDTH, SPACESHIP_HEIGHT)), 270)
+##################################################################################################################################
+def vertical_movement(player, platforms, falling_platforms):
+    for platform in falling_platforms:
+        platform.y_vel = platform.accelerate_by_gravity()
+        platform.y += platform.y_vel
+        if platform.y >= HEIGHT:
+            falling_platforms.remove(platform)
+    
+    if player.on_ground_check():
+        player.y = HEIGHT - BLUE_HEIGHT
+        player.y_vel = 0
+    elif not player.on_any_platforms_check(platforms, falling_platforms):
+        player.y_vel = player.accelerate_by_gravity()
+        player.y += player.y_vel
+    else:
+        player.y_vel = 0
+        for platform in falling_platforms:
+            if player.on_platform_check(platform): player.y = platform.y - player.height + 1
+
+##################################################################################################################################
+class Object:
+    x = 0
+    y = 0
+    y_vel = 0
+    width = 0
+    height = 0
+    
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def accelerate_by_gravity(self) -> int:
+        return min(self.y_vel + GRAVITY_ACC/FPS, MAX_GRAVITY_VEL)
+
+class Player(Object):
+    y_vel = 0
+    vel = BLUE_VEL
+    width = BLUE_WIDTH
+    height = BLUE_HEIGHT
+    jump_timer = BLUE_JUMP_TIMER
+    jump_window = BLUE_JUMP_WINDOW
+    jumped = False
+
+    def __init__(self, x, y, width, height):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+    def move_player(self, pressed_keys):
+        if pressed_keys[pygame.K_a] and self.x > 0:
+            self.x -= self.vel
+        elif pressed_keys[pygame.K_a] and self.x <= 0:
+            self.x = 0
+        if pressed_keys[pygame.K_d] and self.x + self.width < WIDTH:
+            self.x += self.vel
+        elif pressed_keys[pygame.K_d] and self.x + self.width >= WIDTH:
+            self.x = WIDTH - self.width
+
+    def reset_jump(self):
+        self.jump_timer = BLUE_JUMP_TIMER
+        self.jumped = False
+        self.jump_window = BLUE_JUMP_WINDOW
+    def no_jump(self):
+        self.jump_timer = -1
+        self.jumped = True
+
+    def on_ground_check(self) -> bool:
+        if self.y + self.height >= HEIGHT:
+            return True
+        return False
+    
+    def jump(self, pressed_keys):
+        if (pressed_keys[pygame.K_w] or pressed_keys[pygame.K_SPACE]) and self.jump_timer >= 0 and not self.jumped:
+            self.y_vel = 0
+            self.y_vel += BLUE_JUMP_SPEED
+            self.jump_timer -= 1
+
+    def on_platform_check(self, platform) -> bool:
+        if platform.y <= self.y + self.height <= platform.y + platform.height and self.y_vel >= 0:
+            if platform.x <= self.x <= self.x + self.width <= platform.x + platform.width:
+                return True
+            elif self.x <= platform.x <= self.x + self.width:
+                return True
+            elif self.x <= platform.x + platform.width <= self.x + self.width:
+                return True
+        return False
+
+    def on_any_platforms_check(self, platforms, falling_platforms) -> bool:
+        for platform in platforms:
+            if self.on_platform_check(platform): return True
+        for f_platform in falling_platforms:
+            if self.on_platform_check(f_platform): return True
+        return False
+
+    def platform_break(self, platforms, falling_platforms):
+        for platform in platforms:
+            if self.on_platform_check(platform):
+                falling_platforms.append(platform)
+                platforms.remove(platform)
+
+    #def in_goal_check(self, goal) -> bool:
 
 
-def draw_window(red, yellow, red_bullets, yellow_bullets, red_hp, yellow_hp):
-    #WIN.fill(WHITE) # just this alone deosnt work. need to update display
-    WIN.blit(SPACE_BACKGROUND_IMAGE, (0, 0))
-    pygame.draw.rect(WIN, BLACK, BORDER) # rect(surface, colour, rect)
-    # order matters, if fill is last, covers whole screen
+class Platform(Object):
+    width = PLATFORM_WIDTH
+    height = PLATFORM_HEIGHT
 
-    red_hp_text = HEALTH_FONT.render("Health: "+str(red_hp), 1, WHITE) # creating text objects
-    yellow_hp_text = HEALTH_FONT.render("Health: "+str(yellow_hp), 1, WHITE)
-    WIN.blit(red_hp_text, (WIDTH - red_hp_text.get_width() - 10, 10))
-    WIN.blit(yellow_hp_text, (10, 10))
+class Goal(Object):
+    width = GOAL_WIDTH
+    height = GOAL_HEIGHT
 
-    WIN.blit(YELLOW_SPACESHIP, (yellow.x, yellow.y)) # drawing a surface onto screen --> what the ship sprites are
-    WIN.blit(RED_SPACESHIP, (red.x, red.y))
+class GameState:
+    platforms = []
+    falling_platforms = []
+    goal = Goal(WIDTH, HEIGHT)
 
-    for bullet in red_bullets:
-        pygame.draw.rect(WIN, RED, bullet)
-    for bullet in yellow_bullets:
-        pygame.draw.rect(WIN, YELLOW, bullet)
+    def __init__(self):
+        self.state = 0
 
-    pygame.display.update() # actually updates it to change colour
+    def draw_window(self, blue):
+        WIN.fill(BLACK)
+        WIN.blit(GOAL, (self.goal.x, self.goal.y))
+        WIN.blit(BLUE_PERSON, (blue.x, blue.y))
 
-def yellow_handle_movement(keys_pressed, ship):
-    if keys_pressed[pygame.K_a] and ship.x - SHIP_VEL > 0: #LEFT
-        ship.x -= SHIP_VEL
-    if keys_pressed[pygame.K_d] and ship.x + SHIP_VEL + ship.width < BORDER.x: #right
-        ship.x += SHIP_VEL
-    if keys_pressed[pygame.K_w] and ship.y - SHIP_VEL > 0: #UP
-        ship.y -= SHIP_VEL
-    if keys_pressed[pygame.K_s] and ship.y + SHIP_VEL + ship.height < HEIGHT - 10: #DOWN
-        ship.y += SHIP_VEL
+        for platform in self.platforms:
+            WIN.blit(PLATFORM, (platform.x, platform.y))
+        for platform in self.falling_platforms:
+            if platform.y + platform.y_vel < HEIGHT:
+                WIN.blit(FALLING_PLATFORM, (platform.x, platform.y))
+            else:
+                self.falling_platforms.remove(platform)
 
-def red_handle_movement(keys_pressed, ship):
-    if keys_pressed[pygame.K_LEFT] and ship.x - SHIP_VEL > BORDER.x + BORDER.width: #LEFT
-        ship.x -= SHIP_VEL
-    if keys_pressed[pygame.K_RIGHT] and ship.x + SHIP_VEL < WIDTH - ship.width: #right
-        ship.x += SHIP_VEL
-    if keys_pressed[pygame.K_UP] and ship.y - SHIP_VEL > 0: #UP
-        ship.y -= SHIP_VEL
-    if keys_pressed[pygame.K_DOWN] and ship.y + SHIP_VEL + ship.height < HEIGHT - 10: #DOWN
-        ship.y += SHIP_VEL
+        pygame.display.update()
 
-def handle_bullets(yellow_bullets, red_bullets, yellow, red):
-    for bullet in yellow_bullets:
-        bullet.x += BULLET_VEL
-        if red.colliderect(bullet):
-            pygame.event.post(pygame.event.Event(RED_HIT)) # posting an event then check for it in main()
-            yellow_bullets.remove(bullet)
-        elif bullet.x > WIDTH:
-            yellow_bullets.remove(bullet)
-    for bullet in red_bullets:
-        bullet.x -= BULLET_VEL
-        if yellow.colliderect(bullet):
-            pygame.event.post(pygame.event.Event(YELLOW_HIT)) # posting an event then check for it in main()
-            red_bullets.remove(bullet)
-        elif bullet.x < 0:
-            red_bullets.remove(bullet)
+    def intro(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self.platforms = []
+                self.falling_platforms = []
+                self.goal = Goal(WIDTH-GOAL_WIDTH, HEIGHT-GOAL_HEIGHT)
+                self.state += 1
+        
+        ready_text = INTRO_FONT.render("Click to Play", 1, WHITE)
+        WIN.blit(ready_text, ((WIDTH - ready_text.get_width())//2, (HEIGHT - ready_text.get_height())//2))
 
-def draw_winner(text):
-    draw_text = WINNER_FONT.render(text, 1, WHITE)
-    WIN.blit(draw_text, (WIDTH//2 - draw_text.get_width()//2, HEIGHT//2 - draw_text.get_height()//2))
-    pygame.display.update()
-    pygame.time.delay(PAUSE_TIME)
+        pygame.display.update()
 
-def main(): #main game loop
-    red = pygame.Rect(700, 300, SPACESHIP_WIDTH, SPACESHIP_HEIGHT)
-    red_hp = 10
-    red_bullets = []
-    yellow = pygame.Rect(100, 300, SPACESHIP_WIDTH, SPACESHIP_HEIGHT)
-    yellow_hp = 10
-    yellow_bullets = []
+    def level_one(self):
+        pressed_keys = pygame.key.get_pressed()
 
-    clock = pygame.time.Clock()
-    run = True
-  
-    while run:
-        clock.tick(FPS) # caps frame rate
-        for event in pygame.event.get(): # list of all events and we're looping through them
-            if event.type == pygame.QUIT: # when X button top right is clicked
-                run = False
-                pygame.quit() # since later one is commented out
-            
+        landed = BLUE.on_ground_check() or BLUE.on_any_platforms_check(self.platforms, self.falling_platforms)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                  
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LCTRL and len(yellow_bullets) < MAX_BULLETS:
-                    bullet = pygame.Rect(yellow.x + yellow.width, yellow.y + yellow.height//2 - 2, 10, 5)
-                    yellow_bullets.append(bullet)
-                    BULLET_FIRE_SOUND.play()
+                if (event.key == pygame.K_w or event.key == pygame.K_SPACE) and landed and not BLUE.jumped:
+                    BLUE.jumped = True
+                    BLUE.y -= 1
 
-                if event.key == pygame.K_RCTRL and len(red_bullets) < MAX_BULLETS:
-                    bullet = pygame.Rect(red.x, red.y + red.height//2 - 2, 10, 5)
-                    red_bullets.append(bullet)
-                    BULLET_FIRE_SOUND.play()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                self.platforms.append(Platform(mouse_x - PLATFORM_WIDTH//2, mouse_y - PLATFORM_HEIGHT//2))
+                if len(self.platforms) > MAX_PLATFORMS:
+                    for i in range(0, MAX_PLATFORMS):
+                        self.platforms.remove(self.platforms[i])
+            
+        # Gravity
+        vertical_movement(BLUE, self.platforms, self.falling_platforms)
 
-            if event.type == RED_HIT:
-                red_hp -= 1
-                BULLET_HIT_SOUND.play()
+        # Left-Right Movement
+        BLUE.move_player(pressed_keys)
+            
+        # Jumping
+        BLUE.jump(pressed_keys)
+        if landed: 
+            BLUE.reset_jump()
+        elif BLUE.jump_window > 0:
+            BLUE.jump_window -= 1
+        else:
+            BLUE.no_jump()
 
-            if event.type == YELLOW_HIT:
-                yellow_hp -= 1
-                BULLET_HIT_SOUND.play()
+        # Platforms
+        BLUE.platform_break(self.platforms, self.falling_platforms)
 
-        # yellow.x += 1 # 60 pixels/s
-        # WASD for yellow, Arrows for red
-        # this method allows multiple button presses at once
-        keys_pressed = pygame.key.get_pressed() # gets what keys are being pressed down
-        yellow_handle_movement(keys_pressed, yellow)
-        red_handle_movement(keys_pressed, red)
+        self.draw_window(BLUE)
 
-        # BULLETS
-        handle_bullets(yellow_bullets, red_bullets, yellow, red)
+    def level_two():
+        pressed_keys = pygame.key.get_pressed()
 
-        # UPDATE SCREEN
-        draw_window(red, yellow, red_bullets, yellow_bullets, red_hp, yellow_hp)
+        landed = BLUE.on_ground_check() or BLUE.on_any_platforms_check(self.platforms, self.falling_platforms)
 
-        # WINNER?
-        winner_text = ""
-        if red_hp <= 0:
-            winner_text = "YELLOW WINS!"
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                  
+            if event.type == pygame.KEYDOWN:
+                if (event.key == pygame.K_w or event.key == pygame.K_SPACE) and landed and not BLUE.jumped:
+                    BLUE.jumped = True
+                    BLUE.y -= 1
 
-        if yellow_hp <= 0:
-            winner_text = "RED WINS!"
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                self.platforms.append(Platform(mouse_x - PLATFORM_WIDTH//2, mouse_y - PLATFORM_HEIGHT//2))
+                if len(self.platforms) > MAX_PLATFORMS:
+                    for i in range(0, MAX_PLATFORMS):
+                        self.platforms.remove(self.platforms[i])
+            
+        # Gravity
+        vertical_movement(BLUE, self.platforms, self.falling_platforms)
 
-        if winner_text != "":
-            draw_winner(winner_text)
-            break
+        # Left-Right Movement
+        BLUE.move_player(pressed_keys)
+            
+        # Jumping
+        BLUE.jump(pressed_keys)
+        if landed: 
+            BLUE.reset_jump()
+        elif BLUE.jump_window > 0:
+            BLUE.jump_window -= 1
+        else:
+            BLUE.no_jump()
 
-    #pygame.quit()
-    main() # restart game when over
+        # Platforms
+        BLUE.platform_break(self.platforms, self.falling_platforms)
 
-if __name__ == "__main__": # only run this code if run through this file, not if imported # if name of file is main
-    main()
+        self.draw_window(BLUE)
+
+    def state_manager(self):
+        if self.state == 0:
+            self.intro()
+        elif self.state == 1:
+            self.level_one()
+        #elif self.state == 2:
+        #    self.level_two()
+
+if __name__ == "__main__":
+    pygame.init()
+    clock = pygame.time.Clock()
+    game_state = GameState()
+
+    BLUE = Player(0, HEIGHT - BLUE_HEIGHT, BLUE_WIDTH, BLUE_HEIGHT)
+
+    while True:
+        clock.tick(FPS)
+        game_state.state_manager()

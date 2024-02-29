@@ -1,0 +1,14 @@
+09/10/2023 - Day 3 - 0.3.?
+Fixed jumping, so now can only jump if on ground or platform (half second window)
+Platforms fall at about same rate as player (get faster than it somehow)
+    but close enough at the start of fall it's fine
+To do:
+    On wall check for wall jumps? (not sure if this should be in) - (11/10, just decided no wall jumps!)
+    Level completion - (11/10: goal add: watch tutourial)
+    More levels 
+    Sound
+    Sprites
+
+11/10/2023 - Day 4 - 0.4.?
+Created way to add more levels
+Reorganized everything into parent class (Object) and sublclasses
