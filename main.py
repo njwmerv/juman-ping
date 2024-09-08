@@ -1,5 +1,5 @@
 import pygame
-import os
+from sys import exit
 
 pygame.font.init()
 pygame.mixer.init()
@@ -42,10 +42,10 @@ MAX_PLATFORMS = 1
 GOAL_WIDTH, GOAL_HEIGHT = 50, 50
 
 # Images
-BLUE_PERSON = pygame.transform.scale(pygame.image.load(os.path.join("Assets","blue_person.png")), (BLUE_WIDTH, BLUE_HEIGHT))
-PLATFORM = pygame.transform.scale(pygame.image.load(os.path.join("Assets","platform.png")), (PLATFORM_WIDTH, PLATFORM_HEIGHT))
-FALLING_PLATFORM = pygame.transform.scale(pygame.image.load(os.path.join("Assets","falling_platform.png")), (PLATFORM_WIDTH, PLATFORM_HEIGHT))
-GOAL = pygame.transform.scale(pygame.image.load(os.path.join("Assets","goal_flag.png")), (GOAL_WIDTH,GOAL_HEIGHT))
+GOAL = pygame.transform.scale(pygame.image.load("./Assets/goal_flag.png"), (GOAL_WIDTH,GOAL_HEIGHT))
+PLATFORM = pygame.transform.scale(pygame.image.load("./Assets/platform.png"), (PLATFORM_WIDTH, PLATFORM_HEIGHT))
+BLUE_PERSON = pygame.transform.scale(pygame.image.load("./Assets/blue_person.png"), (BLUE_WIDTH, BLUE_HEIGHT))
+FALLING_PLATFORM = pygame.transform.scale(pygame.image.load("./Assets/falling_platform.png"), (PLATFORM_WIDTH, PLATFORM_HEIGHT))
 
 ##################################################################################################################################
 def vertical_movement(player, platforms, falling_platforms):
@@ -66,6 +66,10 @@ def vertical_movement(player, platforms, falling_platforms):
         for platform in falling_platforms:
             if player.on_platform_check(platform): player.y = platform.y - player.height + 1
 
+def quit_game():
+    pygame.quit()
+    exit()
+
 ##################################################################################################################################
 class Object:
     x = 0
@@ -78,7 +82,7 @@ class Object:
         self.x = x
         self.y = y
 
-    def accelerate_by_gravity(self) -> int:
+    def accelerate_by_gravity(self) -> float:
         return min(self.y_vel + GRAVITY_ACC/FPS, MAX_GRAVITY_VEL)
 
 class Player(Object):
@@ -185,7 +189,7 @@ class GameState:
     def intro(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
+                quit_game()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.platforms = []
                 self.falling_platforms = []
@@ -204,7 +208,7 @@ class GameState:
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
+                quit_game()
                   
             if event.type == pygame.KEYDOWN:
                 if (event.key == pygame.K_w or event.key == pygame.K_SPACE) and landed and not BLUE.jumped:
@@ -238,14 +242,14 @@ class GameState:
 
         self.draw_window(BLUE)
 
-    def level_two():
+    def level_two(self):
         pressed_keys = pygame.key.get_pressed()
 
         landed = BLUE.on_ground_check() or BLUE.on_any_platforms_check(self.platforms, self.falling_platforms)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
+                quit_game()
                   
             if event.type == pygame.KEYDOWN:
                 if (event.key == pygame.K_w or event.key == pygame.K_SPACE) and landed and not BLUE.jumped:
