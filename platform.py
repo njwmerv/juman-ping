@@ -21,6 +21,9 @@ class Platform(Block):
         self._surface = pygame.transform.scale(pygame.image.load(self.SPRITE_PATH), (PLATFORM_WIDTH, PLATFORM_HEIGHT))
 
     # Accessors/Setters
+    @property
+    def surface(self) -> pygame.SurfaceType:
+        return self._surface
 
     # Methods
     def collide(self):

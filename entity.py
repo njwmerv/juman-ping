@@ -1,7 +1,7 @@
-from abc import abstractproperty
+from abc import ABC, abstractproperty
 from pygame import SurfaceType
 
-class Entity:
+class Entity(ABC):
     # Constants
 
     # Attributes
@@ -9,7 +9,7 @@ class Entity:
     _y : int
     _width : int
     _height : int
-    _surface : SurfaceType = abstractproperty
+    surface : SurfaceType = abstractproperty
 
     # Methods
     def __init__(self, x : int, y : int, width : int, height : int):
@@ -30,10 +30,6 @@ class Entity:
     @property
     def height(self) -> int:
         return self._height
-
-    @property
-    def surface(self) -> SurfaceType:
-        return self._surface
 
     @property
     def top(self) -> int:

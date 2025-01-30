@@ -41,6 +41,10 @@ class Player(Entity):
     def platforms(self) -> list[Platform]:
         return self._platforms_queue
 
+    @property
+    def surface(self) -> pygame.SurfaceType:
+        return self._surface
+
     # Private Methods
     def _accelerate_by_gravity(self):
         if self._airborne: # accelerate by gravity if airborne only
