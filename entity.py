@@ -34,3 +34,23 @@ class Entity:
     @property
     def surface(self) -> SurfaceType:
         return self._surface
+
+    @property
+    def top(self) -> int:
+        return self._y
+
+    @property
+    def bot(self) -> int:
+        return self._y + self._height
+
+    @property
+    def left(self) -> int:
+        return self._x
+
+    @property
+    def right(self) -> int:
+        return self._x + self._width
+
+    @property
+    def center(self) -> (int, int):
+        return self._x + (self._width / 2), self._y + (self._height / 2)
