@@ -1,4 +1,4 @@
-from abc import ABC, abstractproperty
+from abc import ABC, abstractmethod
 from pygame import SurfaceType
 
 class Entity(ABC):
@@ -9,7 +9,7 @@ class Entity(ABC):
     _y : int
     _width : int
     _height : int
-    surface : SurfaceType = abstractproperty
+    _surface : SurfaceType
 
     # Methods
     def __init__(self, x : int, y : int, width : int, height : int):
@@ -19,6 +19,11 @@ class Entity(ABC):
         self._height = height if height > 0 else 0
 
     # Accessors/Setters
+    @property
+    @abstractmethod
+    def surface(self):
+        pass
+
     @property
     def pos(self) -> (int, int):
         return self._x, self._y
