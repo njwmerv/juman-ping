@@ -3,23 +3,23 @@ from entity import Entity
 
 class Block(Entity):
     # Constants
-    SPRITE_PATH = "./Assets/goal_flag.png"
+    SPRITE_PATH : str = "./Assets/goal_flag.png" # This is temporary
+    DIRECTIONS : list[str] = ["top", "bot", "left", "right"]
 
     # Attributes
-    _colour : (int, int, int)
+    _passthrough = {"top":False, "bot":False, "left":False, "right":False}
 
     # Magic Methods
-    def __init__(self, x : int, y : int, width : int, height : int, red : int, green : int, blue : int):
+    def __init__(self, x : int, y : int, width : int, height : int, passthrough : dict[str, bool] = None):
         super().__init__(x=x, y=y, width=width, height=height)
-        new_red = min(255, max(0, red))
-        new_green = min(255, max(0, green))
-        new_blue = min(255, max(0, blue))
-        self._colour = (new_red, new_green, new_blue)
+        for direction in self.DIRECTIONS:
+            if direction in passthrough.keys() and type(passthrough[direction]) == bool:
+                self._passthrough[direction] = passthrough[direction]
         self._surface = pygame.transform.scale(pygame.image.load(self.SPRITE_PATH), (width, height))
 
     # Accessors/Setters
     @property
-    def colour(self) -> (int, int, int):
-        return self._colour
+    def passthrough(self) -> (bool, bool, bool, bool):
+        return self._passthrough.values()
 
     # Methods

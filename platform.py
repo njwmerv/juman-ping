@@ -15,7 +15,7 @@ class Platform(Block):
 
     # Magic Methods
     def __init__(self, x : int, y : int, red = 255, green = 255, blue = 255):
-        super().__init__(x=x, y=y, width=PLATFORM_WIDTH, height=PLATFORM_HEIGHT, red=red, green=green, blue=blue)
+        super().__init__(x=x, y=y, width=PLATFORM_WIDTH, height=PLATFORM_HEIGHT, passthrough={"bot":True})
         self._falling = False
         self._vel_y = 0
         self._surface = pygame.transform.scale(pygame.image.load(self.SPRITE_PATH), (PLATFORM_WIDTH, PLATFORM_HEIGHT))
