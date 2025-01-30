@@ -11,8 +11,10 @@ class Player(Entity):
     JUMP_WINDOW : int = round(FPS / 2)
     MAX_PLATFORMS : int = 2
     MOVEMENT_SPEED : float = 3
+    ACCELERATION : float = 0.5
 
     # Attributes
+    _vel_x : float
     _vel_y : float
     _airborne : bool
     _jump_timer : int
@@ -20,9 +22,10 @@ class Player(Entity):
     _platforms_queue : list[Platform]
 
     # Magic Methods
-    def __init__(self, x : int, y : int, width : int, height : int, vel_y : float, sprite_path : str):
+    def __init__(self, x : int, y : int, width : int, height : int, sprite_path : str):
         super().__init__(x=x, y=y, width=width, height=height)
-        self._vel_y = vel_y
+        self._vel_x = 0
+        self._vel_y = 0
         self._airborne = True
         self._jump_timer = 0
         self._jump_window = 0
@@ -64,10 +67,10 @@ class Player(Entity):
         self._jump_timer = -1
         self._airborne = True
 
-    def _vertical_move(self, pressed_keys : ScancodeWrapper):
+    def _vertical_move(self, jumping : bool):
         self._accelerate_by_gravity()
 
-        if pressed_keys[pygame.K_SPACE] or pressed_keys[pygame.K_w] or pressed_keys[pygame.K_UP]:
+        if jumping:
             self._jump()
             self._y -= 1
 
@@ -79,20 +82,28 @@ class Player(Entity):
             self._no_jump()
         self._y += self._vel_y
 
-    def _horizontal_move(self, pressed_keys : ScancodeWrapper):
-        if pressed_keys[pygame.K_a] or pressed_keys[pygame.K_LEFT]:
-            self._x -= self.MOVEMENT_SPEED
-        if pressed_keys[pygame.K_d] or pressed_keys[pygame.K_RIGHT]:
-            self._x += self.MOVEMENT_SPEED
+    def _horizontal_move(self, moving_left : bool, moving_right : bool):
+        if moving_left:
+            self._vel_x = max(-self.MOVEMENT_SPEED, self._vel_x - self.ACCELERATION)
+        else:
+            self._vel_x = max(0.0, self._vel_x)
+        if moving_right:
+            self._vel_x = min(self.MOVEMENT_SPEED, self._vel_x + self.ACCELERATION)
+        else:
+            self._vel_x = min(0.0, self._vel_x)
+        self._x += self._vel_x
 
     # Public Methods
     def move(self, pressed_keys : ScancodeWrapper):
         """
-        Handles movement logic for the Player
+        Wrapper for movement logic for the Player
         :param pressed_keys: ScancodeWrapper
         """
-        self._horizontal_move(pressed_keys)
-        self._vertical_move(pressed_keys)
+        moving_left : bool = pressed_keys[pygame.K_a] or pressed_keys[pygame.K_LEFT]
+        moving_right : bool = pressed_keys[pygame.K_d] or pressed_keys[pygame.K_RIGHT]
+        self._horizontal_move(moving_left, moving_right)
+        jumping : bool = pressed_keys[pygame.K_SPACE] or pressed_keys[pygame.K_w] or pressed_keys[pygame.K_UP]
+        self._vertical_move(jumping)
 
     def check_collisions(self, blocks : list[Block]):
         """
