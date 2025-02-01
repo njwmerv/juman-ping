@@ -1,11 +1,12 @@
 # Game
 FPS : int = 60
-SCREEN_WIDTH : int = 1500
+CELL_SIZE : int = 16
+SCREEN_WIDTH : int = 1280
 SCREEN_HEIGHT : int = 800
 
 # Sprite
-BLUE_WIDTH : int = 25
-BLUE_HEIGHT : int = 45
+BLUE_WIDTH : int = CELL_SIZE * 2
+BLUE_HEIGHT : int = CELL_SIZE * 3
 PLATFORM_WIDTH : int = 35
 PLATFORM_HEIGHT : int = 15
 
