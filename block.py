@@ -7,7 +7,7 @@ class Block(Entity):
     DIRECTIONS : list[str] = ["top", "bot", "left", "right"]
 
     # Attributes
-    _passthrough = {"top":False, "bot":False, "left":False, "right":False}
+    _passthrough : dict[str, bool] = {"top":False, "bot":False, "left":False, "right":False}
 
     # Magic Methods
     def __init__(self, x : int, y : int, width : int, height : int, passthrough : dict[str, bool] = {}):
@@ -19,7 +19,11 @@ class Block(Entity):
 
     # Accessors/Setters
     @property
-    def passthrough(self) -> (bool, bool, bool, bool):
-        return self._passthrough.values()
+    def passthrough(self) -> dict[str, bool]:
+        return self._passthrough
+
+    @property
+    def surface(self) -> pygame.SurfaceType:
+        return self._surface
 
     # Methods
