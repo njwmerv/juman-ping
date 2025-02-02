@@ -7,8 +7,8 @@ SCREEN_HEIGHT : int = 800
 # Sprite
 BLUE_WIDTH : int = CELL_SIZE * 2
 BLUE_HEIGHT : int = CELL_SIZE * 3
-PLATFORM_WIDTH : int = 35
-PLATFORM_HEIGHT : int = 15
+PLATFORM_WIDTH : int = CELL_SIZE
+PLATFORM_HEIGHT : int = CELL_SIZE
 
 # Movement
 JUMP_SPEED : float = -6
