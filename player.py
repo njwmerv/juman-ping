@@ -2,48 +2,35 @@ import pygame
 from block import Block
 from entity import Entity
 from platform import Platform
-from pygame.key import ScancodeWrapper
-from game_constants import FPS, GRAVITY_ACC, MAX_GRAVITY_VEL, JUMP_SPEED, SCREEN_WIDTH, SCREEN_HEIGHT
+from game_constants import FPS, CELL_SIZE, GRAVITY_ACC, MAX_GRAVITY_VEL, SCREEN_WIDTH, SCREEN_HEIGHT
+
+# Player Constants
+BLUE_WIDTH : int = CELL_SIZE * 2
+JUMP_SPEED : float = -6
+JUMP_TIMER : int = 7
+BLUE_HEIGHT : int = CELL_SIZE * 3
+JUMP_WINDOW : int = round(FPS / 2)
+SPRITE_PATH : str = './Assets/blue_person.png'
+ACCELERATION : float = 0.5
+MAX_PLATFORMS : int = 2
+MOVEMENT_SPEED : float = 3
 
 class Player(Entity):
-    # Constants
-    JUMP_TIMER : int = 7
-    JUMP_WINDOW : int = round(FPS / 2)
-    MAX_PLATFORMS : int = 2
-    MOVEMENT_SPEED : float = 3
-    ACCELERATION : float = 0.5
-
     # Attributes
-    _vel_x : float
-    _vel_y : float
-    _airborne : bool
-    _jump_timer : int
-    _jump_window : int
-    _platforms_queue : list[Platform]
+    _airborne : bool = True
+    _jump_timer : int = 0
+    _jump_window : int = 0
+    _platforms_queue : list[Platform] = []
+    _platforms: pygame.sprite.Group = pygame.sprite.Group()
 
     # Magic Methods
-    def __init__(self, x : int, y : int, width : int, height : int, sprite_path : str):
-        super().__init__(x=x, y=y, width=width, height=height)
-        self._vel_x = 0
-        self._vel_y = 0
-        self._airborne = True
-        self._jump_timer = 0
-        self._jump_window = 0
-        self._platforms_queue = []
-        self._surface = pygame.transform.scale(pygame.image.load(sprite_path), (width, height))
+    def __init__(self, pos : (int, int)):
+        super().__init__(sprite_path=SPRITE_PATH, pos=pos, width=BLUE_WIDTH, height=BLUE_HEIGHT)
 
     # Accessors/Setters
     @property
-    def vel(self) -> float:
-        return self._vel_y
-
-    @property
-    def platforms(self) -> list[Platform]:
-        return self._platforms_queue
-
-    @property
-    def surface(self) -> pygame.SurfaceType:
-        return self._surface
+    def platforms(self) -> pygame.sprite.Group:
+        return self._platforms
 
     # Private Methods
     def _accelerate_by_gravity(self):
@@ -64,8 +51,8 @@ class Player(Entity):
         """
         self._vel_y = 0
         self._airborne = False
-        self._jump_timer = self.JUMP_TIMER
-        self._jump_window = self.JUMP_WINDOW
+        self._jump_timer = JUMP_TIMER
+        self._jump_window = JUMP_WINDOW
 
     def _no_jump(self):
         self._jump_timer = -1
@@ -76,7 +63,7 @@ class Player(Entity):
 
         if jumping:
             self._jump()
-            self._y -= 1
+            self.rect.y -= 1
 
         if not self._airborne:
             self._is_grounded()
@@ -84,24 +71,24 @@ class Player(Entity):
             self._jump_window -= 1
         else:
             self._no_jump()
-        self._y += self._vel_y
+        self.rect.y += self._vel_y
 
     def _horizontal_move(self, moving_left : bool, moving_right : bool):
         if moving_left:
-            self._vel_x = max(-self.MOVEMENT_SPEED, self._vel_x - self.ACCELERATION)
+            self._vel_x = max(-MOVEMENT_SPEED, self._vel_x - ACCELERATION)
         else:
             self._vel_x = max(0.0, self._vel_x)
         if moving_right:
-            self._vel_x = min(self.MOVEMENT_SPEED, self._vel_x + self.ACCELERATION)
+            self._vel_x = min(MOVEMENT_SPEED, self._vel_x + ACCELERATION)
         else:
             self._vel_x = min(0.0, self._vel_x)
-        self._x += self._vel_x
+        self.rect.x += self._vel_x
 
     # Public Methods
-    def move(self, pressed_keys : ScancodeWrapper):
+    def move(self, pressed_keys : pygame.key.ScancodeWrapper):
         """
         Wrapper for movement logic for the Player
-        :param pressed_keys: ScancodeWrapper
+        :param pressed_keys: pygame.key.ScancodeWrapper
         """
         moving_left : bool = pressed_keys[pygame.K_a] or pressed_keys[pygame.K_LEFT]
         moving_right : bool = pressed_keys[pygame.K_d] or pressed_keys[pygame.K_RIGHT]
@@ -116,13 +103,13 @@ class Player(Entity):
         If a player ends up off-screen (horizontally), fix that too.
         :param blocks: list[Block]
         """
-        if self._y + self._height > SCREEN_HEIGHT:
+        if self.rect.bottom > SCREEN_HEIGHT:
             self._is_grounded()
-            self._y = SCREEN_HEIGHT - self._height
-        if self._x < 0:
-            self._x = 0
-        elif self._x + self._width > SCREEN_WIDTH:
-            self._x = SCREEN_WIDTH - self._width
+            self.rect.bottom = SCREEN_HEIGHT
+        if self.rect.left < 0:
+            self.rect.left = 0
+        elif self.rect.right > SCREEN_WIDTH:
+            self.rect.right = SCREEN_WIDTH
 
         # TODO: define when a Player is colliding with a Block
         for block in blocks:
@@ -133,7 +120,9 @@ class Player(Entity):
         Creates a new Platform at the given position (pos), and deletes the oldest Platform if there are too many
         :param pos: (int, int)
         """
-        new_platform = Platform(x=pos[0], y=pos[1])
-        if len(self._platforms_queue) == self.MAX_PLATFORMS:
+        new_platform : Platform = Platform(pos=pos)
+        if len(self._platforms_queue) == MAX_PLATFORMS:
+            self._platforms.remove(self._platforms_queue[0])
             self._platforms_queue.pop(0)
+        self._platforms.add(new_platform)
         self._platforms_queue.append(new_platform)

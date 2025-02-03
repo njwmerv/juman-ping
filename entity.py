@@ -1,33 +1,22 @@
-from abc import ABC, abstractmethod
-from pygame import SurfaceType
+import pygame
 
-class Entity(ABC):
-    # Constants
-
+class Entity(pygame.sprite.Sprite):
     # Attributes
-    _x : int
-    _y : int
     _width : int
     _height : int
-    _surface : SurfaceType
+    _vel_x : float = 0
+    _vel_y : float = 0
 
     # Methods
-    def __init__(self, x : int, y : int, width : int, height : int):
-        self._x = x if x > 0 else 0
-        self._y = y if y > 0 else 0
-        self._width = width if width > 0 else 0
-        self._height = height if height > 0 else 0
+    def __init__(self, sprite_path : str, pos : (int, int), width : int, height : int):
+        super().__init__()
+        self.image = pygame.transform.scale(pygame.image.load(sprite_path), size=(width, height)).convert_alpha()
+        self.rect = self.image.get_rect()
+        self._width = width
+        self._height = height
+        self._x, self._y = pos
 
     # Accessors/Setters
-    @property
-    @abstractmethod
-    def surface(self):
-        pass
-
-    @property
-    def pos(self) -> (int, int):
-        return self._x, self._y
-
     @property
     def width(self) -> int:
         return self._width
@@ -37,21 +26,5 @@ class Entity(ABC):
         return self._height
 
     @property
-    def top(self) -> int:
-        return self._y
-
-    @property
-    def bot(self) -> int:
-        return self._y + self._height
-
-    @property
-    def left(self) -> int:
-        return self._x
-
-    @property
-    def right(self) -> int:
-        return self._x + self._width
-
-    @property
-    def center(self) -> (int, int):
-        return self._x + (self._width / 2), self._y + (self._height / 2)
+    def vel(self) -> (float, float):
+        return self._vel_x, self._vel_y

@@ -1,37 +1,48 @@
 import json
-from abc import ABC
+import pygame
 from block import Block
 from player import Player
 from game_constants import CELL_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT
 
+# Constants
+terrain_key : str = 'terrain'
+
+# Helpers
 def generate_block(kind : int, x : int, y : int) -> Block | None:
+    pos : (int, int) = (x * CELL_SIZE, y * CELL_SIZE)
     match kind:
         case 0: # Empty
             return None
-        case _: # Default Block
-            return Block(x=(x * CELL_SIZE), y=(y * CELL_SIZE), width=CELL_SIZE, height=CELL_SIZE)
+        case 1: # Default Block
+            return Block(sprite_path="./Assets/goal_flag.png", pos=pos, width=CELL_SIZE, height=CELL_SIZE)
 
-class Level(ABC):
-    # Constants
-
+class Level:
     # Attributes
     _terrain : list[list[Block]]
+    _terrain_group : pygame.sprite.Group = pygame.sprite.Group()
 
     # Magic Methods
     def __init__(self, level_data : str):
         self._terrain = []
         file = open(level_data)
         data = json.load(file)
-        for row in range(len(data['terrain'])):
+        for row in range(len(data[terrain_key])):
             new_row : list[Block] = []
-            for col in range(len(data['terrain'][row])):
-                new_row.append(generate_block(data['terrain'][row][col], y=row, x=col))
+            for col in range(len(data[terrain_key][row])):
+                new_block : Block = generate_block(kind=data[terrain_key][row][col], y=row, x=col)
+                new_row.append(new_block)
+                if new_block is not None:
+                    self._terrain_group.add(new_block)
             self._terrain.append(new_row)
 
     # Accessors/Setters
     @property
     def terrain(self) -> list[list[Block]]:
         return self._terrain
+
+    @property
+    def terrain_group(self) -> pygame.sprite.Group:
+        return self._terrain_group
 
     # Methods
     def find_near_blocks(self, player : Player) -> list[Block]:
@@ -41,10 +52,10 @@ class Level(ABC):
         :return list[Block]
         """
         # Find Possible Collisions
-        top : int = round(player.top) // CELL_SIZE
-        bot : int = min(round(player.bot) // CELL_SIZE, SCREEN_HEIGHT // CELL_SIZE - 1)
-        left : int = round(player.left) // CELL_SIZE
-        right : int = min(round(player.right) // CELL_SIZE, SCREEN_WIDTH // CELL_SIZE - 1)
+        top : int = round(player.rect.top) // CELL_SIZE
+        bot : int = min(round(player.rect.bottom) // CELL_SIZE, SCREEN_HEIGHT // CELL_SIZE - 1)
+        left : int = round(player.rect.left) // CELL_SIZE
+        right : int = min(round(player.rect.right) // CELL_SIZE, SCREEN_WIDTH // CELL_SIZE - 1)
         nearest_blocks : list[Block] = []
         for row in range(top, bot + 1):
             for col in range(left, right + 1):

@@ -1,34 +1,28 @@
 import pygame
 from block import Block
-from game_constants import FPS, GRAVITY_ACC, MAX_GRAVITY_VEL, PLATFORM_WIDTH, PLATFORM_HEIGHT
+from game_constants import FPS, CELL_SIZE, GRAVITY_ACC, MAX_GRAVITY_VEL
+
+# Platform Constants
+SPRITE_PATH : str = './Assets/platform.png'
+BROKEN_PATH : str = './Assets/falling_platform.png'
+PLATFORM_WIDTH : int = CELL_SIZE
+PLATFORM_HEIGHT : int = CELL_SIZE
 
 class Platform(Block):
-    # Constants
-    WIDTH : int = 35
-    HEIGHT : int = 15
-    SPRITE_PATH : str = "./Assets/platform.png"
-    BROKEN_PATH : str = "./Assets/falling_platform.png"
-
     # Attributes
-    _falling : bool
-    _vel_y: float
+    _vel_y : float = 0
+    _falling : bool = False
 
     # Magic Methods
-    def __init__(self, x : int, y : int, red = 255, green = 255, blue = 255):
-        super().__init__(x=x, y=y, width=PLATFORM_WIDTH, height=PLATFORM_HEIGHT, passthrough={"bot":True})
-        self._falling = False
-        self._vel_y = 0
-        self._surface = pygame.transform.scale(pygame.image.load(self.SPRITE_PATH), (PLATFORM_WIDTH, PLATFORM_HEIGHT))
+    def __init__(self, pos : (int, int)):
+        super().__init__(sprite_path=SPRITE_PATH, pos=pos, width=PLATFORM_WIDTH, height=PLATFORM_HEIGHT, passthrough={"bot":True})
 
     # Accessors/Setters
-    @property
-    def surface(self) -> pygame.SurfaceType:
-        return self._surface
 
     # Methods
     def collide(self):
         self._falling = True
-        self._surface = pygame.transform.scale(pygame.image.load(self.BROKEN_PATH), (PLATFORM_WIDTH, PLATFORM_HEIGHT))
+        self.image = pygame.transform.scale(pygame.image.load(filename=BROKEN_PATH), size=(PLATFORM_WIDTH, PLATFORM_HEIGHT)).convert_alpha()
 
     def _accelerate_by_gravity(self):
         if self._falling:
@@ -37,4 +31,4 @@ class Platform(Block):
 
     def move(self):
         self._accelerate_by_gravity()
-        self._y += self._vel_y
+        self.rect.y += self._vel_y

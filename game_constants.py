@@ -1,17 +1,11 @@
 # Game
 FPS : int = 60
+NAME : str = 'Juman Ping'
 CELL_SIZE : int = 16
 SCREEN_WIDTH : int = 1280
 SCREEN_HEIGHT : int = 800
 
-# Sprite
-BLUE_WIDTH : int = CELL_SIZE * 2
-BLUE_HEIGHT : int = CELL_SIZE * 3
-PLATFORM_WIDTH : int = CELL_SIZE
-PLATFORM_HEIGHT : int = CELL_SIZE
-
 # Movement
-JUMP_SPEED : float = -6
 GRAVITY_ACC : float = 9.81
 MAX_GRAVITY_VEL: float = 61.25
 
