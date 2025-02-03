@@ -23,7 +23,7 @@ class Platform(Block):
     # Methods
     def collide(self):
         self._falling = True
-        self.image = pygame.transform.scale(pygame.image.load(filename=BROKEN_PATH), size=(PLATFORM_WIDTH, PLATFORM_HEIGHT)).convert_alpha()
+        self.image = pygame.transform.scale(pygame.image.load(BROKEN_PATH), size=(PLATFORM_WIDTH, PLATFORM_HEIGHT)).convert_alpha()
 
     def _accelerate_by_gravity(self):
         if self._falling:

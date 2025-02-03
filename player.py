@@ -34,6 +34,7 @@ class Player(Entity):
 
     # Private Methods
     def _accelerate_by_gravity(self):
+        # TODO Rework gravity to always be active
         if self._airborne: # accelerate by gravity if airborne only
             new_vel_y : float = self._vel_y + (GRAVITY_ACC / FPS)
             self._vel_y = new_vel_y if new_vel_y <= MAX_GRAVITY_VEL else MAX_GRAVITY_VEL
@@ -95,6 +96,8 @@ class Player(Entity):
         self._horizontal_move(moving_left, moving_right)
         jumping : bool = pressed_keys[pygame.K_SPACE] or pressed_keys[pygame.K_w] or pressed_keys[pygame.K_UP]
         self._vertical_move(jumping)
+        for platform in self._platforms_queue:
+            platform.move()
 
     def check_collisions(self, blocks : list[Block]):
         """
@@ -114,6 +117,12 @@ class Player(Entity):
         # TODO: define when a Player is colliding with a Block
         for block in blocks:
             pass
+
+        # Platform Collisions
+        for platform in self._platforms_queue:
+            if self.rect.colliderect(platform.rect) and self._vel_y >= 0:
+                platform.collide()
+                self._is_grounded()
 
     def add_platform(self, pos : (int, int)):
         """
