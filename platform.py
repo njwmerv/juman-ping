@@ -6,7 +6,7 @@ from game_constants import FPS, CELL_SIZE, GRAVITY_ACC, MAX_GRAVITY_VEL
 SPRITE_PATH : str = './Assets/platform.png'
 BROKEN_PATH : str = './Assets/falling_platform.png'
 PLATFORM_WIDTH : int = CELL_SIZE
-PLATFORM_HEIGHT : int = CELL_SIZE
+PLATFORM_HEIGHT : int = CELL_SIZE // 2
 
 class Platform(Block):
     # Attributes
@@ -16,7 +16,7 @@ class Platform(Block):
     # Magic Methods
     def __init__(self, pos : (int, int)):
         pos = (pos[0] - PLATFORM_WIDTH // 2, pos[1] - PLATFORM_HEIGHT // 2)
-        super().__init__(sprite_path=SPRITE_PATH, pos=pos, width=PLATFORM_WIDTH, height=PLATFORM_HEIGHT, bot=True)
+        super().__init__(sprite_path=SPRITE_PATH, pos=pos, width=PLATFORM_WIDTH, height=PLATFORM_HEIGHT, bot=True, left=True, right=True)
 
     # Accessors/Setters
 
