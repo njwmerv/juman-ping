@@ -5,10 +5,10 @@ from platform import Platform
 from game_constants import FPS, CELL_SIZE, GRAVITY_ACC, MAX_GRAVITY_VEL, SCREEN_WIDTH, SCREEN_HEIGHT
 
 # Player Constants
-BLUE_WIDTH : int = CELL_SIZE * 2
+BLUE_WIDTH : int = CELL_SIZE
 JUMP_SPEED : float = -6
 JUMP_TIMER : int = 7
-BLUE_HEIGHT : int = CELL_SIZE * 3
+BLUE_HEIGHT : int = CELL_SIZE * 1.5
 JUMP_WINDOW : int = round(FPS / 2)
 SPRITE_PATH : str = './Assets/blue_person.png'
 ACCELERATION : float = 0.5
@@ -86,6 +86,36 @@ class Player(Entity):
             self._vel_x = min(0.0, self._vel_x)
         self.rect.x += self._vel_x
 
+    def _can_passthrough(self, block : Block) -> bool:
+        if self._vel_x > 0 and block.passthrough.get("left", False):
+            return True
+        elif self._vel_x < 0 and block.passthrough.get("right", False):
+            return True
+        elif self._vel_y > 0 and block.passthrough.get("top", False):
+            return True
+        elif self._vel_y < 0 and block.passthrough.get("bot", False):
+            return True
+        return False
+
+    def _block_collision(self, block : Block):
+        """
+        Handles what to do when colliding with a Block
+        :param block:
+        :return:
+        """
+        if self.rect.bottom > block.rect.top > self.rect.bottom - CELL_SIZE // 2:
+            self._is_grounded()
+            self.rect.bottom = block.rect.top
+        elif self.rect.top < block.rect.bottom < self.rect.top + CELL_SIZE // 4:
+            self.rect.top = block.rect.bottom
+            self._vel_y *= -1
+        elif self.rect.right > block.rect.left > self.rect.right - BLUE_WIDTH // 4:
+            self.rect.right = block.rect.left
+            self._vel_x = 0
+        elif self.rect.left < block.rect.right < self.rect.left + BLUE_WIDTH // 4:
+            self.rect.left = block.rect.right
+            self._vel_x = 0
+
     # Public Methods
     def move(self, pressed_keys : pygame.key.ScancodeWrapper):
         """
@@ -121,9 +151,10 @@ class Player(Entity):
         elif self.rect.right > SCREEN_WIDTH:
             self.rect.right = SCREEN_WIDTH
 
-        # TODO: define when a Player is colliding with a Block
+        # Terrain
         for block in blocks:
-            pass
+            if self.rect.colliderect(block.rect) and not self._can_passthrough(block):
+                self._block_collision(block)
 
         # Platform Collisions
         for platform in self._platforms_queue:
