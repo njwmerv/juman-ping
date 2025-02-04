@@ -14,7 +14,7 @@ class Entity(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self._width = width
         self._height = height
-        self._x, self._y = pos
+        self.rect.x, self.rect.y = pos
 
     # Accessors/Setters
     @property
