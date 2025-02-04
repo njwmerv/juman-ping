@@ -2,10 +2,12 @@ import json
 import pygame
 from block import Block
 from player import Player
-from game_constants import CELL_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT
+from game_constants import NAME, CELL_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT
 
 # Constants
+name_key : str = 'level_name'
 terrain_key : str = 'terrain'
+start_pos_key : str = 'start_pos'
 
 # Helpers
 def generate_block(kind : int, x : int, y : int) -> Block | None:
@@ -20,12 +22,15 @@ class Level:
     # Attributes
     _terrain : list[list[Block]]
     _terrain_group : pygame.sprite.Group = pygame.sprite.Group()
+    _start_pos : (int, int)
 
     # Magic Methods
     def __init__(self, level_data : str):
         self._terrain = []
         file = open(level_data)
         data = json.load(file)
+        pygame.display.set_caption(f"{NAME} - {data[name_key]}")
+        self._start_pos = data[start_pos_key]
         for row in range(len(data[terrain_key])):
             new_row : list[Block] = []
             for col in range(len(data[terrain_key][row])):
@@ -43,6 +48,10 @@ class Level:
     @property
     def terrain_group(self) -> pygame.sprite.Group:
         return self._terrain_group
+
+    @property
+    def start_pos(self) -> (int, int):
+        return self._start_pos
 
     # Methods
     def find_near_blocks(self, player : Player) -> list[Block]:
