@@ -34,10 +34,12 @@ if __name__ == "__main__":
                 running = False
                 break
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                BLUE.add_platform(pygame.mouse.get_pos())
+                if pygame.mouse.get_pressed()[0]: BLUE.add_platform(pygame.mouse.get_pos())
+                elif pygame.mouse.get_pressed()[2]:
+                    BLUE.rect.x, BLUE.rect.y = pygame.mouse.get_pos()
 
         BLUE.move(pressed_keys) # Movement
-        BLUE.check_collisions([]) # Double check positions
+        BLUE.check_collisions(LEVEL.find_near_blocks(BLUE)) # Double check positions
 
         # Drawing Everything
         WIN.fill(WHITE)
