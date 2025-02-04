@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     # Entities
     LEVEL : Level = Level('./Assets/levels/test.json')
-    BLUE : Player = Player(pos=(320, 400))
+    BLUE : Player = Player(pos=LEVEL.start_pos)
     PLAYER : pygame.sprite.GroupSingle = pygame.sprite.GroupSingle(BLUE)
 
     running = True
