@@ -21,6 +21,7 @@ class Player(Entity):
     _jump_timer : int = 0
     _jump_window : int = 0
     _platforms_queue : list[Platform] = []
+    _falling_platforms : list[Platform] = []
     _platforms: pygame.sprite.Group = pygame.sprite.Group()
 
     # Magic Methods
@@ -94,10 +95,16 @@ class Player(Entity):
         moving_left : bool = pressed_keys[pygame.K_a] or pressed_keys[pygame.K_LEFT]
         moving_right : bool = pressed_keys[pygame.K_d] or pressed_keys[pygame.K_RIGHT]
         self._horizontal_move(moving_left, moving_right)
+
         jumping : bool = pressed_keys[pygame.K_SPACE] or pressed_keys[pygame.K_w] or pressed_keys[pygame.K_UP]
         self._vertical_move(jumping)
-        for platform in self._platforms_queue:
+
+        for platform in self._platforms_queue: platform.move()
+        for platform in self._falling_platforms:
             platform.move()
+            if platform.rect.top >= SCREEN_HEIGHT:
+                self._falling_platforms.remove(platform)
+                self._platforms.remove(platform)
 
     def check_collisions(self, blocks : list[Block]):
         """
@@ -122,6 +129,11 @@ class Player(Entity):
         for platform in self._platforms_queue:
             if self.rect.colliderect(platform.rect) and self._vel_y >= 0:
                 platform.collide()
+                self._falling_platforms.append(platform)
+                self._platforms_queue.remove(platform)
+                self._is_grounded()
+        for platform in self._falling_platforms:
+            if self.rect.colliderect(platform.rect) and self._vel_y >= 0:
                 self._is_grounded()
 
     def add_platform(self, pos : (int, int)):
@@ -130,7 +142,7 @@ class Player(Entity):
         :param pos: (int, int)
         """
         new_platform : Platform = Platform(pos=pos)
-        if len(self._platforms_queue) == MAX_PLATFORMS:
+        while len(self._platforms_queue) >= MAX_PLATFORMS:
             self._platforms.remove(self._platforms_queue[0])
             self._platforms_queue.pop(0)
         self._platforms.add(new_platform)
