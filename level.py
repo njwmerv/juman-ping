@@ -61,13 +61,13 @@ class Level:
         :return list[Block]
         """
         # Find Possible Collisions
-        top : int = round(player.rect.top) // CELL_SIZE
+        top : int = max(round(player.rect.top) // CELL_SIZE - 1, 0)
         bot : int = min(round(player.rect.bottom) // CELL_SIZE, SCREEN_HEIGHT // CELL_SIZE - 1)
-        left : int = round(player.rect.left) // CELL_SIZE
+        left : int = max(round(player.rect.left) // CELL_SIZE - 1, 0)
         right : int = min(round(player.rect.right) // CELL_SIZE, SCREEN_WIDTH // CELL_SIZE - 1)
         nearest_blocks : list[Block] = []
         for row in range(top, bot + 1):
             for col in range(left, right + 1):
-                if self._terrain[row][col] is not None:
+                if self._terrain[row][col] is not None and self._terrain[row][col].rect.colliderect(player.rect):
                     nearest_blocks.append(self._terrain[row][col])
         return nearest_blocks
