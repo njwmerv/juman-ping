@@ -8,7 +8,7 @@ pygame.font.init()
 pygame.mixer.init()
 
 # WINDOW / SCREEN CONSTANTS
-WIN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+WIN : pygame.Surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption(NAME)
 
 # FONTS
@@ -38,18 +38,13 @@ if __name__ == "__main__":
                 elif pygame.mouse.get_pressed()[2]:
                     BLUE.rect.x, BLUE.rect.y = pygame.mouse.get_pos()
 
-        BLUE.move(pressed_keys) # Movement
-        BLUE.check_collisions(LEVEL.find_near_blocks(BLUE)) # Double check positions
+        BLUE.move(pressed_keys, LEVEL.find_near_blocks(BLUE)) # Movement
 
         # Drawing Everything
         WIN.fill(WHITE)
         LEVEL.terrain_group.draw(WIN)
         BLUE.platforms.draw(WIN)
         PLAYER.draw(WIN)
-
-            # Debug
-        # ready_text = DEBUG_FONT.render(str(BLUE.vel())+ " " + str(BLUE._airborne) + " " + str(BLUE.pos()) + " " + str(BLUE._jump_timer >= 0 and not BLUE._airborne), 1, BLACK)
-        # WIN.blit(ready_text, ((WIDTH - ready_text.get_width()) // 2, (HEIGHT - ready_text.get_height()) // 2))
 
         pygame.display.update()
 
