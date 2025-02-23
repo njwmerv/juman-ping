@@ -5,10 +5,10 @@ from platform import Platform
 from game_constants import FPS, CELL_SIZE, GRAVITY_ACC, MAX_GRAVITY_VEL, SCREEN_WIDTH, SCREEN_HEIGHT
 
 # Player Constants
-BLUE_WIDTH : int = CELL_SIZE
+BLUE_WIDTH : int = 2 * CELL_SIZE
 JUMP_SPEED : float = -6
 JUMP_TIMER : int = 7
-BLUE_HEIGHT : int = CELL_SIZE * 1.5
+BLUE_HEIGHT : int = 3 * CELL_SIZE
 JUMP_WINDOW : int = round(FPS / 2)
 SPRITE_PATH : str = './Assets/blue_person.png'
 ACCELERATION : float = 0.5
@@ -17,9 +17,8 @@ MOVEMENT_SPEED : float = 3
 
 class Player(Entity):
     # Attributes
-    _airborne : bool = True
+    _grounded : bool = False
     _jump_timer : int = 0
-    _jump_window : int = 0
     _platforms_queue : list[Platform] = []
     _falling_platforms : list[Platform] = []
     _platforms: pygame.sprite.Group = pygame.sprite.Group()
@@ -35,44 +34,34 @@ class Player(Entity):
 
     # Private Methods
     def _accelerate_by_gravity(self):
-        # TODO Rework gravity to always be active
-        if self._airborne: # accelerate by gravity if airborne only
+        if not self._grounded:
             new_vel_y : float = self._vel_y + (GRAVITY_ACC / FPS)
             self._vel_y = new_vel_y if new_vel_y <= MAX_GRAVITY_VEL else MAX_GRAVITY_VEL
 
     def _jump(self):
-        if self._jump_timer >= 0 and not self._airborne:
+        if self._jump_timer >= 0 and self._grounded:
             self._vel_y = JUMP_SPEED
             self._jump_timer -= 1
-            self._airborne = True
+            self._grounded = False
 
-    def _is_grounded(self):
+    def _is_grounded(self, blocks : list[Block]) -> bool:
+        for block in blocks:
+            if block.rect.top <= self.rect.bottom <= block.rect.bottom:
+                self._be_grounded()
+                return True
+        return False
+
+    def _be_grounded(self):
         """
         Modifies a Player object to be grounded, i.e. can jump again
-        :return:
         """
+        self._grounded = True
         self._vel_y = 0
-        self._airborne = False
         self._jump_timer = JUMP_TIMER
-        self._jump_window = JUMP_WINDOW
-
-    def _no_jump(self):
-        self._jump_timer = -1
-        self._airborne = True
 
     def _vertical_move(self, jumping : bool):
         self._accelerate_by_gravity()
-
-        if jumping:
-            self._jump()
-            self.rect.y -= 1
-
-        if not self._airborne:
-            self._is_grounded()
-        elif self._jump_window > 0:
-            self._jump_window -= 1
-        else:
-            self._no_jump()
+        if jumping: self._jump()
         self.rect.y += self._vel_y
 
     def _horizontal_move(self, moving_left : bool, moving_right : bool):
@@ -97,75 +86,77 @@ class Player(Entity):
             return True
         return False
 
-    def _block_collision(self, block : Block):
-        """
-        Handles what to do when colliding with a Block
-        :param block:
-        :return:
-        """
-        if self.rect.bottom > block.rect.top > self.rect.bottom - CELL_SIZE // 2:
-            self._is_grounded()
-            self.rect.bottom = block.rect.top
-        elif self.rect.top < block.rect.bottom < self.rect.top + CELL_SIZE // 4:
-            self.rect.top = block.rect.bottom
-            self._vel_y *= -1
-        elif self.rect.right > block.rect.left > self.rect.right - BLUE_WIDTH // 4:
+    def _horizontal_block_collision(self, block : Block):
+        if (self.rect.bottom - 1) <= block.rect.top or self.rect.top - 1 >= block.rect.bottom: return
+        if self.rect.right > block.rect.left > self.rect.right - BLUE_WIDTH // 4:
             self.rect.right = block.rect.left
-            self._vel_x = 0
-        elif self.rect.left < block.rect.right < self.rect.left + BLUE_WIDTH // 4:
+            self._vel_x *= -1
+        if self.rect.left < block.rect.right < self.rect.left + BLUE_WIDTH // 4:
             self.rect.left = block.rect.right
-            self._vel_x = 0
+            self._vel_x *= -1
 
-    # Public Methods
-    def move(self, pressed_keys : pygame.key.ScancodeWrapper):
-        """
-        Wrapper for movement logic for the Player
-        :param pressed_keys: pygame.key.ScancodeWrapper
-        """
-        moving_left : bool = pressed_keys[pygame.K_a] or pressed_keys[pygame.K_LEFT]
-        moving_right : bool = pressed_keys[pygame.K_d] or pressed_keys[pygame.K_RIGHT]
-        self._horizontal_move(moving_left, moving_right)
-
-        jumping : bool = pressed_keys[pygame.K_SPACE] or pressed_keys[pygame.K_w] or pressed_keys[pygame.K_UP]
-        self._vertical_move(jumping)
-
-        for platform in self._platforms_queue: platform.move()
-        for platform in self._falling_platforms:
-            platform.move()
-            if platform.rect.top >= SCREEN_HEIGHT:
-                self._falling_platforms.remove(platform)
-                self._platforms.remove(platform)
-
-    def check_collisions(self, blocks : list[Block]):
-        """
-        Checks if a Player is colliding with terrain, like bottom/sides of the screen, or Blocks.
-        Will make them "grounded" (can jump again) if yes.
-        If a player ends up off-screen (horizontally), fix that too.
-        :param blocks: list[Block]
-        """
-        if self.rect.bottom > SCREEN_HEIGHT:
-            self._is_grounded()
-            self.rect.bottom = SCREEN_HEIGHT
+    def _horizontal_collisions(self, blocks : list[Block]):
         if self.rect.left < 0:
             self.rect.left = 0
         elif self.rect.right > SCREEN_WIDTH:
             self.rect.right = SCREEN_WIDTH
 
+        for block in blocks:
+            if not self._can_passthrough(block): self._horizontal_block_collision(block)
+
+    def _vertical_block_collisions(self, block : Block):
+        if self.rect.right <= block.rect.left or self.rect.left >= block.rect.right: return
+        if self.rect.bottom > block.rect.top > self.rect.bottom - CELL_SIZE:
+            self._be_grounded()
+            self.rect.bottom = block.rect.top + 1
+        if self.rect.top < block.rect.bottom < self.rect.top + CELL_SIZE:
+            self.rect.top = block.rect.bottom
+            self._vel_y *= 0.1
+
+    def _vertical_collisions(self, blocks : list[Block]):
+        self._grounded = self._is_grounded(blocks)
+        if self.rect.bottom >= SCREEN_HEIGHT:
+            self._be_grounded()
+            self.rect.bottom = SCREEN_HEIGHT
+
         # Terrain
         for block in blocks:
-            if self.rect.colliderect(block.rect) and not self._can_passthrough(block):
-                self._block_collision(block)
+            if not self._can_passthrough(block): self._vertical_block_collisions(block)
 
         # Platform Collisions
         for platform in self._platforms_queue:
-            if self.rect.colliderect(platform.rect) and self._vel_y >= 0:
+            if self.rect.colliderect(platform.rect) and not self._can_passthrough(platform) and platform.rect.top <= self.rect.bottom <= platform.rect.bottom:
+                self._be_grounded()
+                self._vertical_block_collisions(platform)
                 platform.collide()
                 self._falling_platforms.append(platform)
                 self._platforms_queue.remove(platform)
-                self._is_grounded()
         for platform in self._falling_platforms:
-            if self.rect.colliderect(platform.rect) and self._vel_y >= 0:
-                self._is_grounded()
+            if self.rect.colliderect(platform.rect) and not self._can_passthrough(platform) and platform.rect.top <= self.rect.bottom <= platform.rect.bottom:
+                self._be_grounded()
+                self._vertical_block_collisions(platform)
+
+    # Public Methods
+    def move(self, pressed_keys : pygame.key.ScancodeWrapper, near_blocks : list[Block]):
+        """
+        Wrapper for movement logic for the Player
+        :param pressed_keys: pygame.key.ScancodeWrapper
+        :param near_blocks: list[Block]
+        """
+        moving_left : bool = pressed_keys[pygame.K_a] or pressed_keys[pygame.K_LEFT]
+        moving_right : bool = pressed_keys[pygame.K_d] or pressed_keys[pygame.K_RIGHT]
+        self._horizontal_move(moving_left, moving_right)
+        self._horizontal_collisions(near_blocks)
+
+        jumping : bool = pressed_keys[pygame.K_SPACE] or pressed_keys[pygame.K_w] or pressed_keys[pygame.K_UP]
+        self._vertical_move(jumping)
+        self._vertical_collisions(near_blocks)
+
+        for platform in self._falling_platforms:
+            platform.move()
+            if platform.rect.top >= SCREEN_HEIGHT:
+                self._falling_platforms.remove(platform)
+                self._platforms.remove(platform)
 
     def add_platform(self, pos : (int, int)):
         """
