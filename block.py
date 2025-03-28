@@ -21,3 +21,6 @@ class Block(pygame.sprite.Sprite):
     # Accessors/Setters
     @property
     def passthrough(self) -> dict[str, bool]: return self._passthrough
+
+    # Methods
+    def collide(self): return
