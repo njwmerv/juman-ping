@@ -1,6 +1,6 @@
 import pygame
 from block import Block
-from game_constants import FPS, CELL_SIZE, GRAVITY_ACC, MAX_GRAVITY_VEL
+from game_constants import CELL_SIZE, GRAVITY_ACC, TERMINAL_VELOCITY
 
 # Platform Constants
 SPRITE_PATH : str = './Assets/platform.png'
@@ -14,11 +14,13 @@ class Platform(Block):
     _falling : bool = False
 
     # Magic Methods
-    def __init__(self, pos : (int, int)):
+    def __init__(self, pos : tuple[int, int]):
         pos = (pos[0] - PLATFORM_WIDTH // 2, pos[1])
         super().__init__(sprite_path=SPRITE_PATH, pos=pos, width=PLATFORM_WIDTH, height=PLATFORM_HEIGHT, bot=True)
 
     # Accessors/Setters
+    @property
+    def is_falling(self) -> bool: return self._falling
 
     # Methods
     def collide(self):
@@ -28,8 +30,8 @@ class Platform(Block):
     def _accelerate_by_gravity(self, dt : float):
         if self._falling:
             new_vel_y : float = self._vel_y + (GRAVITY_ACC * dt)
-            self._vel_y = min(new_vel_y, MAX_GRAVITY_VEL)
+            self._vel_y = min(new_vel_y, TERMINAL_VELOCITY)
 
     def move(self, dt : float):
         self._accelerate_by_gravity(dt)
-        self.rect.y += self._vel_y * dt * FPS
+        self.rect.y += self._vel_y * dt
