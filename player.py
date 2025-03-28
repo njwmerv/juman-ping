@@ -2,171 +2,196 @@ import pygame
 from block import Block
 from entity import Entity
 from platform import Platform
-from game_constants import FPS, CELL_SIZE, GRAVITY_ACC, MAX_GRAVITY_VEL, SCREEN_WIDTH, SCREEN_HEIGHT
+from game_constants import TERMINAL_VELOCITY, SCREEN_WIDTH, SCREEN_HEIGHT
 
-# Player Constants
-BLUE_WIDTH : int = 2 * CELL_SIZE
-JUMP_SPEED : float = -6
-JUMP_TIMER : int = 7
-BLUE_HEIGHT : int = 3 * CELL_SIZE
-JUMP_WINDOW : int = round(FPS / 2)
-SPRITE_PATH : str = './Assets/blue_person.png'
-ACCELERATION : float = 30
+# Size Constants
+BLUE_WIDTH : int = 30 # px
+BLUE_HEIGHT : int = 75 # px
+# Movement Constants
+MOVEMENT_SPEED : float = 300 # px/s
+ACCELERATION : float = 1250 # px/s^2
+DECELERATION : float = 1250 # px/s^2
+AIRBORNE_MOVEMENT_FACTOR : float = 0.5
+# Jump Constants
+JUMP_STRENGTH : float = 600 # px/s
+COYOTE_TIME : float = 0.1 # s
+JUMP_BUFFER_TIME : float = 0.1 # s
+# Platform Constants
 MAX_PLATFORMS : int = 2
-MOVEMENT_SPEED : float = 4.5
 
 class Player(Entity):
-    # Attributes
-    _grounded : bool = False
-    _jump_timer : int = 0
-    _platforms_queue : list[Platform] = []
-    _falling_platforms : list[Platform] = []
-    _platforms: pygame.sprite.Group = pygame.sprite.Group()
+    _on_ground : bool
+    _jump_buffer_counter : float
+    _coyote_time_counter : float
+    _input_map : dict[pygame.key, bool]
+    _platforms : list[Platform]
+    _falling_platforms : list[Platform]
+    _platform_group : pygame.sprite.Group = pygame.sprite.Group()
 
-    # Magic Methods
-    def __init__(self, pos : (int, int)):
-        super().__init__(sprite_path=SPRITE_PATH, pos=pos, width=BLUE_WIDTH, height=BLUE_HEIGHT)
+    # Public -----------------------------------------------------------------------------------------------------------
 
-    # Accessors/Setters
-    @property
-    def platforms(self) -> pygame.sprite.Group:
-        return self._platforms
+    def __init__(self, pos: tuple[int, int]):
+        super().__init__(pos=pos, width=BLUE_WIDTH, height=BLUE_HEIGHT, sprite_path="./Assets/blue_person.png")
+        self._jumping = False
+        self._on_ground = False
+        self._jump_buffer_counter = JUMP_BUFFER_TIME
+        self._coyote_time_counter = COYOTE_TIME
+        self._input_map = {
+            pygame.K_SPACE: False, pygame.K_w: False, pygame.K_UP: False,
+            pygame.K_a: False, pygame.K_LEFT: False,
+            pygame.K_d: False, pygame.K_RIGHT: False
+        }
+        self._platforms = []
+        self._falling_platforms = []
+        self._platform_group = pygame.sprite.Group()
 
-    # Private Methods
-    def _accelerate_by_gravity(self, dt : float):
-        if not self._grounded:
-            new_vel_y : float = self._vel_y + (GRAVITY_ACC * dt)
-            self._vel_y = min(new_vel_y, MAX_GRAVITY_VEL)
-
-    def _jump(self):
-        if self._jump_timer >= 0 and self._grounded:
-            self._vel_y = JUMP_SPEED
-            self._jump_timer -= 1
-            self._grounded = False
-
-    def _is_grounded(self, blocks : list[Block]) -> bool:
-        for block in blocks:
-            if block.rect.top <= self.rect.bottom <= block.rect.bottom:
-                self._be_grounded()
-                return True
-        return False
-
-    def _be_grounded(self):
-        """
-        Modifies a Player object to be grounded, i.e. can jump again
-        """
-        self._grounded = True
-        self._vel_y = 0
-        self._jump_timer = JUMP_TIMER
-
-    def _vertical_move(self, jumping : bool, dt : float):
-        self._accelerate_by_gravity(dt)
-        if jumping: self._jump()
-        self.rect.y += self._vel_y * dt * FPS
-
-    def _horizontal_move(self, moving_left : bool, moving_right : bool, dt : float):
-        if moving_left:
-            self._vel_x = max(-MOVEMENT_SPEED, self._vel_x - ACCELERATION * dt)
-        else:
-            self._vel_x = max(0.0, self._vel_x)
-        if moving_right:
-            self._vel_x = min(MOVEMENT_SPEED, self._vel_x + ACCELERATION * dt)
-        else:
-            self._vel_x = min(0.0, self._vel_x)
-        self.rect.x += self._vel_x * dt * FPS
-
-    def _can_passthrough(self, block : Block) -> bool:
-        if self._vel_x > 0 and block.passthrough.get("left", False):
-            return True
-        elif self._vel_x < 0 and block.passthrough.get("right", False):
-            return True
-        elif self._vel_y > 0 and block.passthrough.get("top", False):
-            return True
-        elif self._vel_y < 0 and block.passthrough.get("bot", False):
-            return True
-        return False
-
-    def _horizontal_block_collision(self, block : Block):
-        if (self.rect.bottom - 1) <= block.rect.top or self.rect.top - 1 >= block.rect.bottom: return
-        if self.rect.right > block.rect.left > self.rect.right - BLUE_WIDTH // 4:
-            self.rect.right = block.rect.left
-            self._vel_x *= -1
-        if self.rect.left < block.rect.right < self.rect.left + BLUE_WIDTH // 4:
-            self.rect.left = block.rect.right
-            self._vel_x *= -1
-
-    def _horizontal_collisions(self, blocks : list[Block]):
-        if self.rect.left < 0:
-            self.rect.left = 0
-        elif self.rect.right > SCREEN_WIDTH:
-            self.rect.right = SCREEN_WIDTH
-
-        for block in blocks:
-            if not self._can_passthrough(block): self._horizontal_block_collision(block)
-
-    def _vertical_block_collisions(self, block : Block):
-        if self.rect.right <= block.rect.left or self.rect.left >= block.rect.right: return
-        if self.rect.bottom > block.rect.top > self.rect.bottom - CELL_SIZE:
-            self._be_grounded()
-            self.rect.bottom = block.rect.top + 1
-        if self.rect.top < block.rect.bottom < self.rect.top + CELL_SIZE:
-            self.rect.top = block.rect.bottom
-            self._vel_y *= 0.1
-
-    def _vertical_collisions(self, blocks : list[Block]):
-        self._grounded = self._is_grounded(blocks)
-        if self.rect.bottom >= SCREEN_HEIGHT:
-            self._be_grounded()
-            self.rect.bottom = SCREEN_HEIGHT
-
-        # Terrain
-        for block in blocks:
-            if not self._can_passthrough(block): self._vertical_block_collisions(block)
-
-        # Platform Collisions
-        for platform in self._platforms_queue:
-            if self.rect.colliderect(platform.rect) and not self._can_passthrough(platform) and platform.rect.top <= self.rect.bottom <= platform.rect.bottom:
-                self._be_grounded()
-                self._vertical_block_collisions(platform)
-                platform.collide()
-                self._falling_platforms.append(platform)
-                self._platforms_queue.remove(platform)
-        for platform in self._falling_platforms:
-            if self.rect.colliderect(platform.rect) and not self._can_passthrough(platform) and platform.rect.top <= self.rect.bottom <= platform.rect.bottom:
-                self._be_grounded()
-                self._vertical_block_collisions(platform)
-
-    # Public Methods
-    def move(self, pressed_keys : pygame.key.ScancodeWrapper, near_blocks : list[Block], dt : float):
+    def move(self, dt : float):
         """
         Wrapper for movement logic for the Player
-        :param pressed_keys: pygame.key.ScancodeWrapper
-        :param near_blocks: list[Block]
         :param dt: float
         """
-        moving_left : bool = pressed_keys[pygame.K_a] or pressed_keys[pygame.K_LEFT]
-        moving_right : bool = pressed_keys[pygame.K_d] or pressed_keys[pygame.K_RIGHT]
-        self._horizontal_move(moving_left, moving_right, dt)
-        self._horizontal_collisions(near_blocks)
+        # Update timers
+        if not self._on_ground:
+            self._coyote_time_counter -= dt
+        else:
+            self._coyote_time_counter = COYOTE_TIME
 
-        jumping : bool = pressed_keys[pygame.K_SPACE] or pressed_keys[pygame.K_w] or pressed_keys[pygame.K_UP]
-        self._vertical_move(jumping, dt)
-        self._vertical_collisions(near_blocks)
+        if self._jump_buffer_counter > 0:
+            self._jump_buffer_counter -= dt
 
-        for platform in self._falling_platforms:
-            platform.move(dt)
-            if platform.rect.top >= SCREEN_HEIGHT:
-                self._falling_platforms.remove(platform)
-                self._platforms.remove(platform)
+        jumping : bool = self._input_map[pygame.K_SPACE] or self._input_map[pygame.K_w] or self._input_map[pygame.K_UP]
+        moving_left : bool = self._input_map[pygame.K_a] or self._input_map[pygame.K_LEFT]
+        moving_right : bool = self._input_map[pygame.K_d] or self._input_map[pygame.K_RIGHT]
 
-    def add_platform(self, pos : (int, int)):
+        self._horizontal_movement(moving_left, moving_right, dt)
+        self._vertical_movement(jumping, dt)
+
+        self._handle_collisions([], dt)
+
+    def handle_input(self, event : pygame.event):
         """
-        Creates a new Platform at the given position (pos), and deletes the oldest Platform if there are too many
-        :param pos: (int, int)
+        Passes input into Player
+        :param event: Event
         """
-        new_platform : Platform = Platform(pos=pos)
-        while len(self._platforms_queue) >= MAX_PLATFORMS:
-            self._platforms.remove(self._platforms_queue[0])
-            self._platforms_queue.pop(0)
-        self._platforms.add(new_platform)
-        self._platforms_queue.append(new_platform)
+        if event.type == pygame.KEYDOWN:
+            self._handle_keydown(event.key)
+        elif event.type == pygame.KEYUP:
+            self._handle_keyup(event.key)
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            self._handle_mousedown(event)
+
+    def add_platform(self, pos: tuple[int, int]):
+        """
+        Creates a platform
+        :param pos: tuple[int, int]
+        """
+        if len(self._platforms) >= MAX_PLATFORMS:
+            self._platform_group.remove(self._platforms[0])
+            self._platforms = self._platforms[1:]
+        self._platforms.append(Platform(pos=pos))
+        self._platform_group.add(self._platforms[-1])
+
+    def draw_platforms(self, window : pygame.Surface):
+        """
+        Draws the platforms of a Player
+        :param window: pygame.Surface
+        """
+        self._platform_group.draw(window)
+
+    # Private ----------------------------------------------------------------------------------------------------------
+
+    def _handle_keydown(self, key : pygame.key):
+        if key in self._input_map.keys(): self._input_map[key] = True
+        if key == pygame.K_SPACE or key == pygame.K_w or key == pygame.K_UP:
+            self._jump_buffer_counter = JUMP_BUFFER_TIME
+
+    def _handle_keyup(self, key : pygame.key):
+        if key in self._input_map.keys(): self._input_map[key] = False
+
+    def _handle_mousedown(self, mouse):
+        match mouse.button:
+            case 1:
+                self.add_platform(mouse.pos)
+
+    def _horizontal_movement(self, left : bool, right : bool, dt : float):
+        direction: int = 0
+        if left: direction -= 1
+        if right: direction += 1
+
+        control_multiplier : float = 1 if self._on_ground else AIRBORNE_MOVEMENT_FACTOR
+
+        if direction != 0:
+            # Accelerate in direction of movement
+            capped_vel_x = direction * MOVEMENT_SPEED
+            acceleration : float = ACCELERATION * control_multiplier * dt
+
+            if (direction > 0 and self._vel_x < capped_vel_x) or (direction < 0 and self._vel_x > capped_vel_x):
+                self._vel_x += direction * acceleration
+                # Cap velocity at maximum speed
+                if direction > 0: self._vel_x = min(self._vel_x, capped_vel_x)
+                else: self._vel_x = max(self._vel_x, capped_vel_x)
+        else:
+            # Decelerate when no direction input
+            deceleration : float = DECELERATION * control_multiplier
+            if self._vel_x > 0:
+                self._vel_x -= deceleration * dt
+                if self._vel_x < 0: self._vel_x = 0
+            elif self._vel_x < 0:
+                self._vel_x += deceleration * dt
+                if self._vel_x > 0: self._vel_x = 0
+
+    def _vertical_movement(self, jumping : bool, dt : float):
+        if jumping: self._handle_jump()
+        if not self._on_ground: self._accelerate_by_gravity(dt)
+        if self._vel_y > TERMINAL_VELOCITY: self._vel_y = TERMINAL_VELOCITY
+
+    def _handle_jump(self):
+        if self._jump_buffer_counter > 0 and (self._on_ground or self._coyote_time_counter > 0):
+            self._vel_y = -JUMP_STRENGTH
+            self._on_ground = False
+            self._jump_buffer_counter = 0
+
+    def _handle_collisions(self, blocks : list[Block], dt : float):
+        # Future movement
+        dx : float = self._vel_x * dt
+        dy : float = self._vel_y * dt
+
+        self.rect.x += dx
+        for block in blocks:
+            if self.rect.colliderect(block.rect) and self._can_passthrough_horizontal(block):
+                self._vel_x = 0
+                if dx > 0: self.rect.right = block.rect.left
+                elif dx < 0: self.rect.left = block.rect.right
+        if self.rect.right > SCREEN_WIDTH:
+            self._vel_x = 0
+            self.rect.right = SCREEN_WIDTH
+        if self.rect.left < 0:
+            self._vel_x = 0
+            self.rect.left = 0
+
+        self.rect.y += dy
+        self._on_ground = False
+        for block in blocks:
+            if self.rect.colliderect(block.rect) and self._can_passthrough_vertical(block):
+                self._vel_y = 0
+                if dy > 0:
+                    self.rect.bottom = block.rect.top
+                    self._on_ground = True
+                elif dy < 0:
+                    self.rect.top = block.rect.bottom
+        if self.rect.bottom > SCREEN_HEIGHT:
+            self._vel_y = 0
+            self.rect.bottom = SCREEN_HEIGHT
+            self._on_ground = True
+
+    def _can_passthrough_horizontal(self, block : Block) -> bool:
+        passthrough : dict[str, bool] = block.passthrough
+        if self._vel_x > 0 and passthrough["left"]: return True
+        if self._vel_x < 0 and passthrough["right"]: return True
+        return False
+
+    def _can_passthrough_vertical(self, block : Block) -> bool:
+        passthrough : dict[str, bool] = block.passthrough
+        if self._vel_y > 0 and passthrough["top"]: return True
+        if self._vel_y < 0 and passthrough["bot"]: return True
+        return False
