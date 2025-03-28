@@ -11,20 +11,17 @@ BLUE_HEIGHT : int = 75 # px
 MOVEMENT_SPEED : float = 300 # px/s
 ACCELERATION : float = 1250 # px/s^2
 DECELERATION : float = 1250 # px/s^2
-AIRBORNE_MOVEMENT_FACTOR : float = 0.5
+AIRBORNE_MOVEMENT_FACTOR : float = 0.1
 # Jump Constants
 JUMP_STRENGTH : float = 600 # px/s
 COYOTE_TIME : float = 0.1 # s
-JUMP_BUFFER_TIME : float = 0.1 # s
-# Platform Constants
-MAX_PLATFORMS : int = 2
 
 class Player(Entity):
     _on_ground : bool
-    _jump_buffer_counter : float
     _coyote_time_counter : float
     _input_map : dict[pygame.key, bool]
     _platforms : list[Platform]
+    _max_platforms : int
     _falling_platforms : list[Platform]
     _platform_group : pygame.sprite.Group = pygame.sprite.Group()
 
@@ -34,7 +31,6 @@ class Player(Entity):
         super().__init__(pos=pos, width=BLUE_WIDTH, height=BLUE_HEIGHT, sprite_path="./Assets/blue_person.png")
         self._jumping = False
         self._on_ground = False
-        self._jump_buffer_counter = JUMP_BUFFER_TIME
         self._coyote_time_counter = COYOTE_TIME
         self._input_map = {
             pygame.K_SPACE: False, pygame.K_w: False, pygame.K_UP: False,
@@ -42,6 +38,7 @@ class Player(Entity):
             pygame.K_d: False, pygame.K_RIGHT: False
         }
         self._platforms = []
+        self._max_platforms = 0
         self._falling_platforms = []
         self._platform_group = pygame.sprite.Group()
 
@@ -56,15 +53,13 @@ class Player(Entity):
         else:
             self._coyote_time_counter = COYOTE_TIME
 
-        if self._jump_buffer_counter > 0:
-            self._jump_buffer_counter -= dt
-
         jumping : bool = self._input_map[pygame.K_SPACE] or self._input_map[pygame.K_w] or self._input_map[pygame.K_UP]
         moving_left : bool = self._input_map[pygame.K_a] or self._input_map[pygame.K_LEFT]
         moving_right : bool = self._input_map[pygame.K_d] or self._input_map[pygame.K_RIGHT]
 
         self._horizontal_movement(moving_left, moving_right, dt)
         self._vertical_movement(jumping, dt)
+        self._platform_movement(dt)
 
         self._handle_collisions([], dt)
 
@@ -85,11 +80,14 @@ class Player(Entity):
         Creates a platform
         :param pos: tuple[int, int]
         """
-        if len(self._platforms) >= MAX_PLATFORMS:
+        if self._max_platforms <= 0: return
+        new_platform : Platform = Platform(pos=pos)
+        if self.rect.colliderect(new_platform.rect): return
+        if len(self._platforms) >= self._max_platforms:
             self._platform_group.remove(self._platforms[0])
             self._platforms = self._platforms[1:]
-        self._platforms.append(Platform(pos=pos))
-        self._platform_group.add(self._platforms[-1])
+        self._platforms.append(new_platform)
+        self._platform_group.add(new_platform)
 
     def draw_platforms(self, window : pygame.Surface):
         """
@@ -98,12 +96,12 @@ class Player(Entity):
         """
         self._platform_group.draw(window)
 
+    def set_max_platforms(self, new_max : int): self._max_platforms = new_max
+
     # Private ----------------------------------------------------------------------------------------------------------
 
     def _handle_keydown(self, key : pygame.key):
         if key in self._input_map.keys(): self._input_map[key] = True
-        if key == pygame.K_SPACE or key == pygame.K_w or key == pygame.K_UP:
-            self._jump_buffer_counter = JUMP_BUFFER_TIME
 
     def _handle_keyup(self, key : pygame.key):
         if key in self._input_map.keys(): self._input_map[key] = False
@@ -146,10 +144,14 @@ class Player(Entity):
         if self._vel_y > TERMINAL_VELOCITY: self._vel_y = TERMINAL_VELOCITY
 
     def _handle_jump(self):
-        if self._jump_buffer_counter > 0 and (self._on_ground or self._coyote_time_counter > 0):
+        if self._on_ground or self._coyote_time_counter > 0:
             self._vel_y = -JUMP_STRENGTH
             self._on_ground = False
-            self._jump_buffer_counter = 0
+            self._coyote_time_counter = 0
+
+    def _reset_jump(self):
+        self._on_ground = True
+        self._coyote_time_counter = COYOTE_TIME
 
     def _handle_collisions(self, blocks : list[Block], dt : float):
         # Future movement
@@ -158,7 +160,7 @@ class Player(Entity):
 
         self.rect.x += dx
         for block in blocks:
-            if self.rect.colliderect(block.rect) and self._can_passthrough_horizontal(block):
+            if self.rect.colliderect(block.rect) and not self._can_passthrough_horizontal(block):
                 self._vel_x = 0
                 if dx > 0: self.rect.right = block.rect.left
                 elif dx < 0: self.rect.left = block.rect.right
@@ -171,27 +173,42 @@ class Player(Entity):
 
         self.rect.y += dy
         self._on_ground = False
-        for block in blocks:
-            if self.rect.colliderect(block.rect) and self._can_passthrough_vertical(block):
+        for block in blocks: # Terrain collisions
+            if self.rect.colliderect(block.rect) and not self._can_passthrough_vertical(block):
                 self._vel_y = 0
                 if dy > 0:
                     self.rect.bottom = block.rect.top
-                    self._on_ground = True
+                    self._reset_jump()
                 elif dy < 0:
                     self.rect.top = block.rect.bottom
-        if self.rect.bottom > SCREEN_HEIGHT:
+        for platform in self._platforms + self._falling_platforms: # Platform collisions
+            if self.rect.colliderect(platform.rect) and not self._can_passthrough_vertical(platform):
+                self._reset_jump()
+                if dy > 0: self.rect.bottom = platform.rect.top + 1
+                if platform in self._platforms:
+                    platform.collide()
+                    self._platforms.remove(platform)
+                    self._falling_platforms.append(platform)
+        if self.rect.bottom > SCREEN_HEIGHT: # Bottom of screen collision
             self._vel_y = 0
             self.rect.bottom = SCREEN_HEIGHT
-            self._on_ground = True
+            self._reset_jump()
 
     def _can_passthrough_horizontal(self, block : Block) -> bool:
         passthrough : dict[str, bool] = block.passthrough
-        if self._vel_x > 0 and passthrough["left"]: return True
-        if self._vel_x < 0 and passthrough["right"]: return True
+        if self._vel_x >= 0 and passthrough["left"]: return True
+        if self._vel_x <= 0 and passthrough["right"]: return True
         return False
 
     def _can_passthrough_vertical(self, block : Block) -> bool:
         passthrough : dict[str, bool] = block.passthrough
-        if self._vel_y > 0 and passthrough["top"]: return True
-        if self._vel_y < 0 and passthrough["bot"]: return True
+        if self._vel_y >= 0 and passthrough["top"]: return True
+        if self._vel_y <= 0 and passthrough["bot"]: return True
         return False
+
+    def _platform_movement(self, dt : float):
+        for platform in self._falling_platforms:
+            platform.move(dt)
+            if platform.rect.top >= SCREEN_HEIGHT: # delete off-screen falling platforms
+                self._platform_group.remove(platform)
+                self._falling_platforms.remove(platform)
