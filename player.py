@@ -11,9 +11,9 @@ JUMP_TIMER : int = 7
 BLUE_HEIGHT : int = 3 * CELL_SIZE
 JUMP_WINDOW : int = round(FPS / 2)
 SPRITE_PATH : str = './Assets/blue_person.png'
-ACCELERATION : float = 0.5
+ACCELERATION : float = 30
 MAX_PLATFORMS : int = 2
-MOVEMENT_SPEED : float = 3
+MOVEMENT_SPEED : float = 4.5
 
 class Player(Entity):
     # Attributes
@@ -33,10 +33,10 @@ class Player(Entity):
         return self._platforms
 
     # Private Methods
-    def _accelerate_by_gravity(self):
+    def _accelerate_by_gravity(self, dt : float):
         if not self._grounded:
-            new_vel_y : float = self._vel_y + (GRAVITY_ACC / FPS)
-            self._vel_y = new_vel_y if new_vel_y <= MAX_GRAVITY_VEL else MAX_GRAVITY_VEL
+            new_vel_y : float = self._vel_y + (GRAVITY_ACC * dt)
+            self._vel_y = min(new_vel_y, MAX_GRAVITY_VEL)
 
     def _jump(self):
         if self._jump_timer >= 0 and self._grounded:
@@ -59,21 +59,21 @@ class Player(Entity):
         self._vel_y = 0
         self._jump_timer = JUMP_TIMER
 
-    def _vertical_move(self, jumping : bool):
-        self._accelerate_by_gravity()
+    def _vertical_move(self, jumping : bool, dt : float):
+        self._accelerate_by_gravity(dt)
         if jumping: self._jump()
-        self.rect.y += self._vel_y
+        self.rect.y += self._vel_y * dt * FPS
 
-    def _horizontal_move(self, moving_left : bool, moving_right : bool):
+    def _horizontal_move(self, moving_left : bool, moving_right : bool, dt : float):
         if moving_left:
-            self._vel_x = max(-MOVEMENT_SPEED, self._vel_x - ACCELERATION)
+            self._vel_x = max(-MOVEMENT_SPEED, self._vel_x - ACCELERATION * dt)
         else:
             self._vel_x = max(0.0, self._vel_x)
         if moving_right:
-            self._vel_x = min(MOVEMENT_SPEED, self._vel_x + ACCELERATION)
+            self._vel_x = min(MOVEMENT_SPEED, self._vel_x + ACCELERATION * dt)
         else:
             self._vel_x = min(0.0, self._vel_x)
-        self.rect.x += self._vel_x
+        self.rect.x += self._vel_x * dt * FPS
 
     def _can_passthrough(self, block : Block) -> bool:
         if self._vel_x > 0 and block.passthrough.get("left", False):
@@ -137,23 +137,24 @@ class Player(Entity):
                 self._vertical_block_collisions(platform)
 
     # Public Methods
-    def move(self, pressed_keys : pygame.key.ScancodeWrapper, near_blocks : list[Block]):
+    def move(self, pressed_keys : pygame.key.ScancodeWrapper, near_blocks : list[Block], dt : float):
         """
         Wrapper for movement logic for the Player
         :param pressed_keys: pygame.key.ScancodeWrapper
         :param near_blocks: list[Block]
+        :param dt: float
         """
         moving_left : bool = pressed_keys[pygame.K_a] or pressed_keys[pygame.K_LEFT]
         moving_right : bool = pressed_keys[pygame.K_d] or pressed_keys[pygame.K_RIGHT]
-        self._horizontal_move(moving_left, moving_right)
+        self._horizontal_move(moving_left, moving_right, dt)
         self._horizontal_collisions(near_blocks)
 
         jumping : bool = pressed_keys[pygame.K_SPACE] or pressed_keys[pygame.K_w] or pressed_keys[pygame.K_UP]
-        self._vertical_move(jumping)
+        self._vertical_move(jumping, dt)
         self._vertical_collisions(near_blocks)
 
         for platform in self._falling_platforms:
-            platform.move()
+            platform.move(dt)
             if platform.rect.top >= SCREEN_HEIGHT:
                 self._falling_platforms.remove(platform)
                 self._platforms.remove(platform)

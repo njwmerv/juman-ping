@@ -25,11 +25,11 @@ class Platform(Block):
         self._falling = True
         self.image = pygame.transform.scale(pygame.image.load(BROKEN_PATH), size=(PLATFORM_WIDTH, PLATFORM_HEIGHT)).convert_alpha()
 
-    def _accelerate_by_gravity(self):
+    def _accelerate_by_gravity(self, dt : float):
         if self._falling:
-            new_vel_y : float = self._vel_y + (GRAVITY_ACC / FPS)
-            self._vel_y = new_vel_y if new_vel_y <= MAX_GRAVITY_VEL else MAX_GRAVITY_VEL
+            new_vel_y : float = self._vel_y + (GRAVITY_ACC * dt)
+            self._vel_y = min(new_vel_y, MAX_GRAVITY_VEL)
 
-    def move(self):
-        self._accelerate_by_gravity()
-        self.rect.y += self._vel_y
+    def move(self, dt : float):
+        self._accelerate_by_gravity(dt)
+        self.rect.y += self._vel_y * dt * FPS

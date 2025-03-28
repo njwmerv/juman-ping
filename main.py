@@ -25,7 +25,7 @@ if __name__ == "__main__":
 
     running = True
     while running:
-        clock.tick(FPS)
+        delta_time : float = clock.tick(FPS) / 1000.0
         pressed_keys = pygame.key.get_pressed()
 
         # Events
@@ -38,7 +38,7 @@ if __name__ == "__main__":
                 elif pygame.mouse.get_pressed()[2]:
                     BLUE.rect.x, BLUE.rect.y = pygame.mouse.get_pos()
 
-        BLUE.move(pressed_keys, LEVEL.find_near_blocks(BLUE)) # Movement
+        BLUE.move(pressed_keys, LEVEL.find_near_blocks(BLUE), delta_time) # Movement
 
         # Drawing Everything
         WIN.fill(WHITE)
