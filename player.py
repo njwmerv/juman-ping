@@ -5,8 +5,8 @@ from platform import Platform
 from game_constants import TERMINAL_VELOCITY, SCREEN_WIDTH, SCREEN_HEIGHT
 
 # Size Constants
-BLUE_WIDTH : int = 30 # px
-BLUE_HEIGHT : int = 75 # px
+BLUE_WIDTH : int = 15 # px
+BLUE_HEIGHT : int = 40 # px
 # Movement Constants
 MOVEMENT_SPEED : float = 300 # px/s
 ACCELERATION : float = 1250 # px/s^2
@@ -141,7 +141,7 @@ class Player(Entity):
 
     def _vertical_movement(self, jumping : bool, dt : float):
         if jumping: self._handle_jump()
-        if not self._on_ground: self._accelerate_by_gravity(dt)
+        self._accelerate_by_gravity(dt)
         if self._vel_y > TERMINAL_VELOCITY: self._vel_y = TERMINAL_VELOCITY
 
     def _handle_jump(self):
