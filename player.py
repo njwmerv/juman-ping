@@ -38,14 +38,15 @@ class Player(Entity):
             pygame.K_d: False, pygame.K_RIGHT: False
         }
         self._platforms = []
-        self._max_platforms = 0
+        self._max_platforms = 1
         self._falling_platforms = []
         self._platform_group = pygame.sprite.Group()
 
-    def move(self, dt : float):
+    def move(self, dt : float, blocks : list[Block]):
         """
         Wrapper for movement logic for the Player
         :param dt: float
+        :param blocks: list[Block]
         """
         # Update timers
         if not self._on_ground:
@@ -61,7 +62,7 @@ class Player(Entity):
         self._vertical_movement(jumping, dt)
         self._platform_movement(dt)
 
-        self._handle_collisions([], dt)
+        self._handle_collisions(dt, blocks)
 
     def handle_input(self, event : pygame.event):
         """
@@ -153,14 +154,14 @@ class Player(Entity):
         self._on_ground = True
         self._coyote_time_counter = COYOTE_TIME
 
-    def _handle_collisions(self, blocks : list[Block], dt : float):
+    def _handle_collisions(self, dt : float, blocks : list[Block]):
         # Future movement
         dx : float = self._vel_x * dt
         dy : float = self._vel_y * dt
 
         self.rect.x += dx
         for block in blocks:
-            if self.rect.colliderect(block.rect) and not self._can_passthrough_horizontal(block):
+            if self.rect.colliderect(block.rect) and not self._can_passthrough(block):
                 self._vel_x = 0
                 if dx > 0: self.rect.right = block.rect.left
                 elif dx < 0: self.rect.left = block.rect.right
@@ -174,7 +175,7 @@ class Player(Entity):
         self.rect.y += dy
         self._on_ground = False
         for block in blocks: # Terrain collisions
-            if self.rect.colliderect(block.rect) and not self._can_passthrough_vertical(block):
+            if self.rect.colliderect(block.rect) and not self._can_passthrough(block):
                 self._vel_y = 0
                 if dy > 0:
                     self.rect.bottom = block.rect.top
@@ -182,7 +183,7 @@ class Player(Entity):
                 elif dy < 0:
                     self.rect.top = block.rect.bottom
         for platform in self._platforms + self._falling_platforms: # Platform collisions
-            if self.rect.colliderect(platform.rect) and not self._can_passthrough_vertical(platform):
+            if self.rect.colliderect(platform.rect) and not self._can_passthrough(platform):
                 self._reset_jump()
                 if dy > 0: self.rect.bottom = platform.rect.top + 1
                 if platform in self._platforms:
@@ -194,16 +195,12 @@ class Player(Entity):
             self.rect.bottom = SCREEN_HEIGHT
             self._reset_jump()
 
-    def _can_passthrough_horizontal(self, block : Block) -> bool:
-        passthrough : dict[str, bool] = block.passthrough
-        if self._vel_x >= 0 and passthrough["left"]: return True
-        if self._vel_x <= 0 and passthrough["right"]: return True
-        return False
-
-    def _can_passthrough_vertical(self, block : Block) -> bool:
-        passthrough : dict[str, bool] = block.passthrough
-        if self._vel_y >= 0 and passthrough["top"]: return True
-        if self._vel_y <= 0 and passthrough["bot"]: return True
+    def _can_passthrough(self, block : Block) -> bool:
+        passthrough: dict[str, bool] = block.passthrough
+        if self._vel_x > 0 and passthrough["left"]: return True
+        if self._vel_x < 0 and passthrough["right"]: return True
+        if self._vel_y > 0 and passthrough["top"]: return True
+        if self._vel_y < 0 and passthrough["bot"]: return True
         return False
 
     def _platform_movement(self, dt : float):

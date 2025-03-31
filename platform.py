@@ -17,8 +17,7 @@ class Platform(Block):
     # Magic Methods
     def __init__(self, pos : tuple[int, int]):
         pos = (pos[0] - PLATFORM_WIDTH // 2, pos[1])
-        super().__init__(sprite_path=SPRITE_PATH, pos=pos, width=PLATFORM_WIDTH, height=PLATFORM_HEIGHT,
-                         bot=True, left=True, right=True)
+        super().__init__(sprite_path=SPRITE_PATH, pos=pos, width=PLATFORM_WIDTH, height=PLATFORM_HEIGHT)
 
     # Accessors/Setters
     @property

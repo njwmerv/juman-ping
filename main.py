@@ -30,20 +30,17 @@ if __name__ == "__main__":
 
         # Events
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 running = False
                 break
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if pygame.mouse.get_pressed()[0]: BLUE.add_platform(pygame.mouse.get_pos())
-                elif pygame.mouse.get_pressed()[2]:
-                    BLUE.rect.x, BLUE.rect.y = pygame.mouse.get_pos()
+            BLUE.handle_input(event)
 
         BLUE.move(pressed_keys, LEVEL.find_near_blocks(BLUE), delta_time) # Movement
 
         # Drawing Everything
         WIN.fill(WHITE)
         LEVEL.terrain_group.draw(WIN)
-        BLUE.platforms.draw(WIN)
+        BLUE.draw_platforms(WIN)
         PLAYER.draw(WIN)
 
         pygame.display.update()
