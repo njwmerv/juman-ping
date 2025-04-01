@@ -1,4 +1,5 @@
 import pygame
+from game_constants import CELL_SIZE
 
 # Block Constants
 DIRECTIONS : list[str] = ["top", "bot", "left", "right"]
@@ -21,6 +22,9 @@ class Block(pygame.sprite.Sprite):
     # Accessors/Setters
     @property
     def passthrough(self) -> dict[str, bool]: return self._passthrough
+
+    @property
+    def pos(self) -> tuple[int, int]: return self.rect.x // CELL_SIZE, self.rect.y // CELL_SIZE
 
     # Methods
     def collide(self): return
