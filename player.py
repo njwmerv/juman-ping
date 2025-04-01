@@ -2,19 +2,24 @@ import pygame
 from block import Block
 from entity import Entity
 from platform import Platform
+from spritesheet import SpriteSheet
 from game_constants import TERMINAL_VELOCITY, SCREEN_WIDTH, SCREEN_HEIGHT
 
 # Size Constants
-BLUE_WIDTH : int = 15 # px
-BLUE_HEIGHT : int = 40 # px
+BLUE_WIDTH : int = 48 # px
+BLUE_HEIGHT : int = 48 # px
 # Movement Constants
 MOVEMENT_SPEED : float = 300 # px/s
 ACCELERATION : float = 1250 # px/s^2
 DECELERATION : float = 1250 # px/s^2
 AIRBORNE_MOVEMENT_FACTOR : float = 0.1
 # Jump Constants
-JUMP_STRENGTH : float = 600 # px/s
+JUMP_STRENGTH : float = 625 # px/s
 COYOTE_TIME : float = 0.1 # s
+# Animation Constants
+BLACK : tuple[int, int, int] = (0, 0, 0)
+FRAME_SIZE : int = 24
+ANIMATION_COOLDOWN : int = 100
 
 class Player(Entity):
     _on_ground : bool
@@ -24,11 +29,16 @@ class Player(Entity):
     _max_platforms : int
     _falling_platforms : list[Platform]
     _platform_group : pygame.sprite.Group = pygame.sprite.Group()
+    _frame : int
+    _surface : pygame.Surface
+    _animation_cd : int
+    _last_updated : int = pygame.time.get_ticks()
+    _animation_frames : dict[str, pygame.Surface | list[pygame.Surface]]
 
     # Public -----------------------------------------------------------------------------------------------------------
 
     def __init__(self, pos: tuple[int, int]):
-        super().__init__(pos=pos, width=BLUE_WIDTH, height=BLUE_HEIGHT, sprite_path="./Assets/blue_person.png")
+        super().__init__(pos=pos, width=BLUE_WIDTH, height=BLUE_HEIGHT, sprite_path="./Assets/entities/blue_person.png")
         self._jumping = False
         self._on_ground = False
         self._coyote_time_counter = COYOTE_TIME
@@ -41,6 +51,22 @@ class Player(Entity):
         self._max_platforms = 1
         self._falling_platforms = []
         self._platform_group = pygame.sprite.Group()
+
+        HOP_SPRITE_SHEET : SpriteSheet = SpriteSheet(image_path="Assets/entities/frog_hop.png")
+        IDLE_SPRITE_SHEET : SpriteSheet = SpriteSheet(image_path="Assets/entities/frog_idle.png")
+        self._animation_frames: dict[str, pygame.Surface | list[pygame.Surface]] = {
+            "hop": [HOP_SPRITE_SHEET.get_frame(i, FRAME_SIZE, FRAME_SIZE, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 10, 9) for i in range(7)],
+            "idle": [IDLE_SPRITE_SHEET.get_frame(i, FRAME_SIZE, FRAME_SIZE, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 10, 9) for i in range(8)],
+            "fall": HOP_SPRITE_SHEET.get_frame(5, FRAME_SIZE - 1, FRAME_SIZE, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 10, 9),
+            "jump": HOP_SPRITE_SHEET.get_frame(3, FRAME_SIZE - 1, FRAME_SIZE, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 10, 9)
+        }
+        self._frame = 0
+        self._animation_cd = ANIMATION_COOLDOWN
+        self._last_updated = pygame.time.get_ticks()
+
+    def draw(self, surface : pygame.Surface):
+        self._platform_group.draw(surface)
+        surface.blit(self._image, self.rect.topleft)
 
     def move(self, dt : float, blocks : list[Block]):
         """
@@ -63,6 +89,7 @@ class Player(Entity):
         self._platform_movement(dt)
 
         self._handle_collisions(dt, blocks)
+        self._animate(dt)
 
     def handle_input(self, event : pygame.event):
         """
@@ -89,13 +116,6 @@ class Player(Entity):
             self._platforms = self._platforms[1:]
         self._platforms.append(new_platform)
         self._platform_group.add(new_platform)
-
-    def draw_platforms(self, window : pygame.Surface):
-        """
-        Draws the platforms of a Player
-        :param window: pygame.Surface
-        """
-        self._platform_group.draw(window)
 
     def set_max_platforms(self, new_max : int): self._max_platforms = new_max
 
@@ -175,6 +195,7 @@ class Player(Entity):
         self.rect.y += dy
         self._on_ground = False
         for block in blocks: # Terrain collisions
+            if self.rect.bottom == block.rect.top: self._on_ground = True
             if self.rect.colliderect(block.rect) and not self._can_passthrough(block):
                 self._vel_y = 0
                 if dy > 0:
@@ -183,6 +204,7 @@ class Player(Entity):
                 elif dy < 0:
                     self.rect.top = block.rect.bottom
         for platform in self._platforms + self._falling_platforms: # Platform collisions
+            if self.rect.bottom == platform.rect.top: self._on_ground = True
             if self.rect.colliderect(platform.rect) and not self._can_passthrough(platform):
                 self._reset_jump()
                 if dy > 0: self.rect.bottom = platform.rect.top + 1
@@ -209,3 +231,20 @@ class Player(Entity):
             if platform.rect.top >= SCREEN_HEIGHT: # delete off-screen falling platforms
                 self._platform_group.remove(platform)
                 self._falling_platforms.remove(platform)
+
+    def _animate(self, dt : float):
+        if self._on_ground:
+            if self._vel_x > 0: # going right
+                self._image = self._animation_frames["hop"][0]
+            elif self._vel_x < 0: # going left
+                self._image = self._animation_frames["hop"][0]
+            else: # idle
+                self._image = self._animation_frames["idle"][0]
+        elif self._vel_y > 0: # falling
+            self._image = self._animation_frames["fall"]
+        elif self._vel_y < 0: # jumping
+            self._image = self._animation_frames["jump"]
+        else:
+            self._image = self._animation_frames["idle"][0]
+        pos : tuple[int, int] = self.rect.center
+        self.rect = self._image.get_rect(center=pos)
