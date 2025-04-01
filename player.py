@@ -30,7 +30,7 @@ class Player(Entity):
     _falling_platforms : list[Platform]
     _platform_group : pygame.sprite.Group = pygame.sprite.Group()
     _frame : int
-    _surface : pygame.Surface
+    image : pygame.Surface
     _animation_cd : int
     _last_updated : int = pygame.time.get_ticks()
     _animation_frames : dict[str, pygame.Surface | list[pygame.Surface]]
@@ -61,12 +61,13 @@ class Player(Entity):
             "jump": HOP_SPRITE_SHEET.get_frame(3, FRAME_SIZE - 1, FRAME_SIZE, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 10, 9)
         }
         self._frame = 0
+        self.image = self._animation_frames["idle"][self._frame]
         self._animation_cd = ANIMATION_COOLDOWN
         self._last_updated = pygame.time.get_ticks()
 
     def draw(self, surface : pygame.Surface):
         self._platform_group.draw(surface)
-        surface.blit(self._image, self.rect.topleft)
+        surface.blit(self.image, self.rect.topleft)
 
     def move(self, dt : float, blocks : list[Block]):
         """
@@ -235,16 +236,17 @@ class Player(Entity):
     def _animate(self, dt : float):
         if self._on_ground:
             if self._vel_x > 0: # going right
-                self._image = self._animation_frames["hop"][0]
+                self.image = self._animation_frames["hop"][0]
             elif self._vel_x < 0: # going left
-                self._image = self._animation_frames["hop"][0]
+                self.image = self._animation_frames["hop"][0]
             else: # idle
-                self._image = self._animation_frames["idle"][0]
+                self.image = self._animation_frames["idle"][0]
         elif self._vel_y > 0: # falling
-            self._image = self._animation_frames["fall"]
+            self.image = self._animation_frames["fall"]
         elif self._vel_y < 0: # jumping
-            self._image = self._animation_frames["jump"]
+            self.image = self._animation_frames["jump"]
         else:
-            self._image = self._animation_frames["idle"][0]
+            self.image = self._animation_frames["idle"][0]
         pos : tuple[int, int] = self.rect.center
-        self.rect = self._image.get_rect(center=pos)
+        self.rect = self.image.get_rect(center=pos)
+        self._mask = pygame.mask.from_surface(self.image)
