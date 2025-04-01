@@ -1,4 +1,5 @@
 import pygame
+from enum import Enum
 from block import Block
 from entity import Entity
 from platform import Platform
@@ -19,27 +20,40 @@ COYOTE_TIME : float = 0.1 # s
 # Animation Constants
 BLACK : tuple[int, int, int] = (0, 0, 0)
 FRAME_SIZE : int = 24
-ANIMATION_COOLDOWN : int = 100
+ANIMATION_COOLDOWN : float  = 0.035
+HOP_KEY : str = "hop"
+IDLE_KEY : str = "idle"
+FALL_KEY : str = "fall"
+JUMP_KEY : str = "jump"
+FALL_FRAME_INDEX : int = 5
+JUMP_FRAME_INDEX : int = 3
+
+class PlayerStates(Enum):
+    MOVED_LEFT = 0
+    MOVED_RIGHT = 1
 
 class Player(Entity):
+    # Movement Fields
     _on_ground : bool
     _coyote_time_counter : float
     _input_map : dict[pygame.key, bool]
+    # Platform Fields
     _platforms : list[Platform]
     _max_platforms : int
     _falling_platforms : list[Platform]
     _platform_group : pygame.sprite.Group = pygame.sprite.Group()
+    # Animation Fields
     _frame : int
     image : pygame.Surface
-    _animation_cd : int
-    _last_updated : int = pygame.time.get_ticks()
+    _animation_cd : float
     _animation_frames : dict[str, pygame.Surface | list[pygame.Surface]]
+    _last_direction : PlayerStates
 
     # Public -----------------------------------------------------------------------------------------------------------
 
     def __init__(self, pos: tuple[int, int]):
         super().__init__(pos=pos, width=BLUE_WIDTH, height=BLUE_HEIGHT, sprite_path="./Assets/entities/blue_person.png")
-        self._jumping = False
+        # Initializing movement fields
         self._on_ground = False
         self._coyote_time_counter = COYOTE_TIME
         self._input_map = {
@@ -47,23 +61,26 @@ class Player(Entity):
             pygame.K_a: False, pygame.K_LEFT: False,
             pygame.K_d: False, pygame.K_RIGHT: False
         }
+        # Initializing platform fields
         self._platforms = []
         self._max_platforms = 1
         self._falling_platforms = []
         self._platform_group = pygame.sprite.Group()
 
+        # Initializing animation fields
         HOP_SPRITE_SHEET : SpriteSheet = SpriteSheet(image_path="Assets/entities/frog_hop.png")
         IDLE_SPRITE_SHEET : SpriteSheet = SpriteSheet(image_path="Assets/entities/frog_idle.png")
         self._animation_frames: dict[str, pygame.Surface | list[pygame.Surface]] = {
-            "hop": [HOP_SPRITE_SHEET.get_frame(i, FRAME_SIZE, FRAME_SIZE, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 10, 9) for i in range(7)],
-            "idle": [IDLE_SPRITE_SHEET.get_frame(i, FRAME_SIZE, FRAME_SIZE, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 10, 9) for i in range(8)],
-            "fall": HOP_SPRITE_SHEET.get_frame(5, FRAME_SIZE - 1, FRAME_SIZE, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 10, 9),
-            "jump": HOP_SPRITE_SHEET.get_frame(3, FRAME_SIZE - 1, FRAME_SIZE, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 10, 9)
+            HOP_KEY: [HOP_SPRITE_SHEET.get_frame(i, 21, 24, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 11, 9) for i in range(7)],
+            IDLE_KEY: [IDLE_SPRITE_SHEET.get_frame(i, 21, 24, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 11, 9) for i in range(8)],
+            FALL_KEY: HOP_SPRITE_SHEET.get_frame(FALL_FRAME_INDEX, 21, 24, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 11, 9),
+            JUMP_KEY: HOP_SPRITE_SHEET.get_frame(JUMP_FRAME_INDEX, 21, 24, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 11, 9)
         }
         self._frame = 0
-        self.image = self._animation_frames["idle"][self._frame]
+        self.image = self._animation_frames[IDLE_KEY][self._frame]
         self._animation_cd = ANIMATION_COOLDOWN
-        self._last_updated = pygame.time.get_ticks()
+        self._last_direction = PlayerStates.MOVED_RIGHT
+        self._mask = pygame.mask.from_surface(self.image)
 
     def draw(self, surface : pygame.Surface):
         self._platform_group.draw(surface)
@@ -137,6 +154,8 @@ class Player(Entity):
         direction: int = 0
         if left: direction -= 1
         if right: direction += 1
+        if direction > 0: self._last_direction = PlayerStates.MOVED_RIGHT
+        elif direction < 0: self._last_direction = PlayerStates.MOVED_LEFT
 
         control_multiplier : float = 1 if self._on_ground else AIRBORNE_MOVEMENT_FACTOR
 
@@ -235,18 +254,32 @@ class Player(Entity):
 
     def _animate(self, dt : float):
         if self._on_ground:
+            self._animation_cd -= dt
+            if self._animation_cd <= 0:
+                self._animation_cd = ANIMATION_COOLDOWN
+                self._frame += 1
+            if self._frame >= len(self._animation_frames[HOP_KEY]) * len(self._animation_frames[IDLE_KEY]):
+                self._frame = 0
+
             if self._vel_x > 0: # going right
-                self.image = self._animation_frames["hop"][0]
+                self.image = self._animation_frames[HOP_KEY][self._frame % len(self._animation_frames[HOP_KEY])]
             elif self._vel_x < 0: # going left
-                self.image = self._animation_frames["hop"][0]
+                self.image = self._animation_frames[HOP_KEY][self._frame % len(self._animation_frames[HOP_KEY])]
             else: # idle
-                self.image = self._animation_frames["idle"][0]
+                self.image = self._animation_frames[IDLE_KEY][self._frame % len(self._animation_frames[IDLE_KEY])]
         elif self._vel_y > 0: # falling
-            self.image = self._animation_frames["fall"]
+            self.image = self._animation_frames[FALL_KEY]
         elif self._vel_y < 0: # jumping
-            self.image = self._animation_frames["jump"]
+            self.image = self._animation_frames[JUMP_KEY]
         else:
-            self.image = self._animation_frames["idle"][0]
+            self.image = self._animation_frames[IDLE_KEY][self._frame % len(self._animation_frames[IDLE_KEY])]
+
+        # If moving left, mirror the image
+        if self._last_direction == PlayerStates.MOVED_LEFT:
+            self.image = pygame.transform.flip(self.image, True, False)
+            self.image.set_colorkey((0, 0, 0))
+
+        # Update rect
         pos : tuple[int, int] = self.rect.center
         self.rect = self.image.get_rect(center=pos)
         self._mask = pygame.mask.from_surface(self.image)
