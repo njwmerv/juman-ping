@@ -1,12 +1,12 @@
 import pygame
 from enum import Enum
-from level import Level
-from player import Player
-from image_loader import ImageLoader
-from game_constants import FPS, NAME, SCREEN_WIDTH, SCREEN_HEIGHT
+from utility.image_loader import ImageLoader
+from utility.game_constants import FPS, NAME, SCREEN_WIDTH, SCREEN_HEIGHT
+from game_objects.other.level import Level
+from game_objects.entities.player import Player
 
 # Constants
-LEVEL_DATA_BASE_PATH : str = "assets/levels/"
+LEVEL_DATA_BASE_PATH : str = "./assets/levels/"
 
 # Helper
 def get_level_data(level : str) -> str:

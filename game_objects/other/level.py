@@ -1,9 +1,9 @@
 import json
 import pygame
-from block import Block
-from player import Player
-from image_loader import ImageLoader
-from game_constants import NAME, CELL_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT
+from utility.image_loader import ImageLoader
+from utility.game_constants import NAME, CELL_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT
+from game_objects.blocks.block import Block
+from game_objects.entities.player import Player
 
 # Constants
 name_key : str = 'level_name'
