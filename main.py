@@ -1,4 +1,4 @@
-from game import Game, GameState
+from game_objects.other.game import Game, GameState
 
 if __name__ == "__main__":
     game : Game = Game()
