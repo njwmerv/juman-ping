@@ -282,4 +282,5 @@ class Player(Entity):
         # Update rect
         pos : tuple[int, int] = self.rect.center
         self.rect = self.image.get_rect(center=pos)
+        self.rect.width = BLUE_WIDTH
         self._mask = pygame.mask.from_surface(self.image)
