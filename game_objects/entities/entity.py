@@ -1,5 +1,5 @@
 import pygame
-from game_constants import GRAVITY_ACC, TERMINAL_VELOCITY
+from utility.game_constants import GRAVITY_ACC, TERMINAL_VELOCITY
 
 class Entity(pygame.sprite.Sprite):
     # Attributes

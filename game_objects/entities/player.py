@@ -1,11 +1,11 @@
 import pygame
 from enum import Enum
-from block import Block
-from entity import Entity
-from platform import Platform
-from spritesheet import SpriteSheet
-from image_loader import ImageLoader
-from game_constants import TERMINAL_VELOCITY, SCREEN_WIDTH, SCREEN_HEIGHT
+from utility.spritesheet import SpriteSheet
+from utility.image_loader import ImageLoader
+from utility.game_constants import TERMINAL_VELOCITY, SCREEN_WIDTH, SCREEN_HEIGHT
+from game_objects.blocks.block import Block
+from game_objects.entities.entity import Entity
+from game_objects.blocks.platform import Platform
 
 # Size Constants
 BLUE_WIDTH : int = 48 # px
@@ -45,6 +45,7 @@ class Player(Entity):
     _platform_group : pygame.sprite.Group = pygame.sprite.Group()
     # Animation Fields
     _frame : int
+    _mask : pygame.Mask
     image : pygame.Surface
     _animation_cd : float
     _animation_frames : dict[str, pygame.Surface | list[pygame.Surface]]
@@ -55,7 +56,7 @@ class Player(Entity):
     # Public -----------------------------------------------------------------------------------------------------------
 
     def __init__(self, pos: tuple[int, int], assets : ImageLoader):
-        super().__init__(pos=pos, width=BLUE_WIDTH, height=BLUE_HEIGHT, sprite_path="assets/entities/blue_person.png")
+        super().__init__(pos=pos, width=BLUE_WIDTH, height=BLUE_HEIGHT, image=assets.get_image("entities", "blue_person.png"))
         # Initializing movement fields
         self._on_ground = False
         self._coyote_time_counter = COYOTE_TIME
@@ -133,6 +134,7 @@ class Player(Entity):
         if self._max_platforms <= 0: return
         new_platform : Platform = Platform(pos=pos, image=self._NORMAL_PLATFORM_IMAGE)
         if self.rect.colliderect(new_platform.rect): return
+        # if pygame.sprite.collide_mask(self, new_platform): return
         if len(self._platforms) >= self._max_platforms:
             self._platform_group.remove(self._platforms[0])
             self._platforms = self._platforms[1:]
@@ -153,6 +155,8 @@ class Player(Entity):
         match mouse.button:
             case 1:
                 self.add_platform(mouse.pos)
+            case _: # TP for debug
+                self.rect.centerx, self.rect.y = pygame.mouse.get_pos()
 
     def _horizontal_movement(self, left : bool, right : bool, dt : float):
         direction: int = 0
@@ -206,6 +210,7 @@ class Player(Entity):
         self.rect.x += dx
         for block in blocks:
             if self.rect.colliderect(block.rect) and not self._can_passthrough(block):
+            # if pygame.sprite.collide_mask(self, block) and not self._can_passthrough(block):
                 self._vel_x = 0
                 if dx > 0: self.rect.right = block.rect.left
                 elif dx < 0: self.rect.left = block.rect.right
@@ -221,6 +226,7 @@ class Player(Entity):
         for block in blocks: # Terrain collisions
             if self.rect.bottom == block.rect.top: self._on_ground = True
             if self.rect.colliderect(block.rect) and not self._can_passthrough(block):
+            # if pygame.sprite.collide_mask(self, block) and not self._can_passthrough(block):
                 self._vel_y = 0
                 if dy > 0:
                     self.rect.bottom = block.rect.top
@@ -232,6 +238,7 @@ class Player(Entity):
                 self._on_ground = True
                 platform.collide()
             if self.rect.colliderect(platform.rect) and not self._can_passthrough(platform):
+            # if pygame.sprite.collide_mask(self, platform) and not self._can_passthrough(platform):
                 self._reset_jump()
                 if dy > 0: self.rect.bottom = platform.rect.top + 1
                 if platform in self._platforms:
