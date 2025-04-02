@@ -1,5 +1,5 @@
 import pygame
-from game_constants import CELL_SIZE
+from utility.game_constants import CELL_SIZE
 
 # Block Constants
 DIRECTIONS : list[str] = ["top", "bot", "left", "right"]
