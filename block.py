@@ -14,7 +14,10 @@ class Block(pygame.sprite.Sprite):
                  sprite_path: str = "", image : pygame.Surface = None):
         if sprite_path == "" and image is None: raise ValueError("Block: At least one of sprite_path or image must be provided")
         super().__init__()
-        self.image = pygame.transform.scale(pygame.image.load(sprite_path), size=(width, height)).convert_alpha()
+        if image is not None:
+            self.image = pygame.transform.scale(image, size=(width, height)).convert_alpha()
+        elif sprite_path != "":
+            self.image = pygame.transform.scale(pygame.image.load(sprite_path), size=(width, height)).convert_alpha()
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = pos
         self._passthrough = {"top": top, "bot": bot, "left": left, "right": right}
