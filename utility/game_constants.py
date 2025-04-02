@@ -6,8 +6,8 @@ SCREEN_WIDTH : int = 1280
 SCREEN_HEIGHT : int = 800
 
 # Movement
-GRAVITY_ACC : float = 9.81
-MAX_GRAVITY_VEL: float = CELL_SIZE // 2
+GRAVITY_ACC : float = 1250
+TERMINAL_VELOCITY : float = 3000
 
 # COLOURS
 WHITE = (255, 255, 255)
