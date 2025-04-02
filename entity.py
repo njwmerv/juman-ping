@@ -4,14 +4,14 @@ from game_constants import GRAVITY_ACC, TERMINAL_VELOCITY
 class Entity(pygame.sprite.Sprite):
     # Attributes
     rect : pygame.Rect
-    _image : pygame.image
+    _image : pygame.Surface
     _width : int
     _height : int
     _vel_x : float = 0
     _vel_y : float = 0
 
     # Methods
-    def __init__(self, pos : tuple[int, int], width : int, height : int, sprite_path : str = "", image : pygame.image = None):
+    def __init__(self, pos : tuple[int, int], width : int, height : int, sprite_path : str = "", image : pygame.Surface = None):
         if sprite_path == "" and image is None: raise ValueError("Entity: At least one of sprite_path or image must be provided")
         super().__init__()
         if image is not None: self._image = pygame.transform.scale(image, size=(width, height)).convert_alpha()

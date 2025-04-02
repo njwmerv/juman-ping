@@ -11,7 +11,7 @@ class Block(pygame.sprite.Sprite):
     # Magic Methods
     def __init__(self, pos: tuple[int, int], width: int, height: int,
                  top : bool = False, bot : bool = False, left : bool = False, right : bool = False,
-                 sprite_path: str = "", image : pygame.image = None):
+                 sprite_path: str = "", image : pygame.Surface = None):
         if sprite_path == "" and image is None: raise ValueError("Block: At least one of sprite_path or image must be provided")
         super().__init__()
         self.image = pygame.transform.scale(pygame.image.load(sprite_path), size=(width, height)).convert_alpha()

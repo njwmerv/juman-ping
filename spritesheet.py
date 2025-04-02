@@ -1,9 +1,9 @@
 import pygame
 
 class SpriteSheet:
-	_sheet : pygame.image
+	_sheet : pygame.Surface
 
-	def __init__(self, image : pygame.image = None, image_path : str = ""):
+	def __init__(self, image : pygame.Surface = None, image_path : str = ""):
 		if image is None and image_path == "": raise ValueError("SpriteSheet: At least one of sprite_path or image must be provided")
 		if image is not None: self._sheet = image
 		else: self._sheet = pygame.image.load(image_path).convert_alpha()
