@@ -224,7 +224,9 @@ class Player(Entity):
                 elif dy < 0:
                     self.rect.top = block.rect.bottom
         for platform in self._platforms + self._falling_platforms: # Platform collisions
-            if self.rect.bottom == platform.rect.top: self._on_ground = True
+            if self.rect.bottom == platform.rect.top:
+                self._on_ground = True
+                platform.collide()
             if self.rect.colliderect(platform.rect) and not self._can_passthrough(platform):
                 self._reset_jump()
                 if dy > 0: self.rect.bottom = platform.rect.top + 1
