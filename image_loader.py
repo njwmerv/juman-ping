@@ -30,7 +30,7 @@ class ImageLoader:
     def __init__(self):
         self._catalog = {}
         for sub_dir in ASSET_SUB_DIRECTORIES:
-            self._catalog[sub_dir] = load_images(f"./Assets/{sub_dir}")
+            self._catalog[sub_dir] = load_images(f"./assets/{sub_dir}")
 
     def get_image(self, category : str, name : str) -> pygame.Surface | None:
         if category not in ASSET_SUB_DIRECTORIES: return None

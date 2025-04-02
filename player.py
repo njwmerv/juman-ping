@@ -55,7 +55,7 @@ class Player(Entity):
     # Public -----------------------------------------------------------------------------------------------------------
 
     def __init__(self, pos: tuple[int, int], assets : ImageLoader):
-        super().__init__(pos=pos, width=BLUE_WIDTH, height=BLUE_HEIGHT, sprite_path="./Assets/entities/blue_person.png")
+        super().__init__(pos=pos, width=BLUE_WIDTH, height=BLUE_HEIGHT, sprite_path="assets/entities/blue_person.png")
         # Initializing movement fields
         self._on_ground = False
         self._coyote_time_counter = COYOTE_TIME

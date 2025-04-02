@@ -6,11 +6,11 @@ from image_loader import ImageLoader
 from game_constants import FPS, NAME, SCREEN_WIDTH, SCREEN_HEIGHT
 
 # Constants
-LEVEL_DATA_BASE_PATH : str = "./Assets/levels/"
+LEVEL_DATA_BASE_PATH : str = "assets/levels/"
 
 # Helper
 def get_level_data(level : str) -> str:
-    return f"./Assets/levels/{level}.json"
+    return f"./assets/levels/{level}.json"
 
 class GameState(Enum):
     PLAY = 0
