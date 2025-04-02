@@ -4,6 +4,7 @@ from block import Block
 from entity import Entity
 from platform import Platform
 from spritesheet import SpriteSheet
+from image_loader import ImageLoader
 from game_constants import TERMINAL_VELOCITY, SCREEN_WIDTH, SCREEN_HEIGHT
 
 # Size Constants
@@ -48,10 +49,12 @@ class Player(Entity):
     _animation_cd : float
     _animation_frames : dict[str, pygame.Surface | list[pygame.Surface]]
     _last_direction : PlayerStates
+    # Constants
+    _NORMAL_PLATFORM_IMAGE : pygame.Surface
 
     # Public -----------------------------------------------------------------------------------------------------------
 
-    def __init__(self, pos: tuple[int, int]):
+    def __init__(self, pos: tuple[int, int], assets : ImageLoader):
         super().__init__(pos=pos, width=BLUE_WIDTH, height=BLUE_HEIGHT, sprite_path="./Assets/entities/blue_person.png")
         # Initializing movement fields
         self._on_ground = False
@@ -66,10 +69,11 @@ class Player(Entity):
         self._max_platforms = 1
         self._falling_platforms = []
         self._platform_group = pygame.sprite.Group()
+        self._NORMAL_PLATFORM_IMAGE = assets.get_image("blocks", "platform.png")
 
         # Initializing animation fields
-        HOP_SPRITE_SHEET : SpriteSheet = SpriteSheet(image_path="Assets/entities/frog_hop.png")
-        IDLE_SPRITE_SHEET : SpriteSheet = SpriteSheet(image_path="Assets/entities/frog_idle.png")
+        HOP_SPRITE_SHEET : SpriteSheet = SpriteSheet(image=assets.get_image("entities", "frog_hop.png"))
+        IDLE_SPRITE_SHEET : SpriteSheet = SpriteSheet(image=assets.get_image("entities", "frog_idle.png"))
         self._animation_frames: dict[str, pygame.Surface | list[pygame.Surface]] = {
             HOP_KEY: [HOP_SPRITE_SHEET.get_frame(i, 21, 24, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 11, 9) for i in range(7)],
             IDLE_KEY: [IDLE_SPRITE_SHEET.get_frame(i, 21, 24, (BLUE_WIDTH, BLUE_HEIGHT), BLACK, 48, 11, 9) for i in range(8)],
@@ -127,7 +131,7 @@ class Player(Entity):
         :param pos: tuple[int, int]
         """
         if self._max_platforms <= 0: return
-        new_platform : Platform = Platform(pos=pos)
+        new_platform : Platform = Platform(pos=pos, image=self._NORMAL_PLATFORM_IMAGE)
         if self.rect.colliderect(new_platform.rect): return
         if len(self._platforms) >= self._max_platforms:
             self._platform_group.remove(self._platforms[0])

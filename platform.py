@@ -3,7 +3,6 @@ from block import Block
 from game_constants import CELL_SIZE, GRAVITY_ACC, TERMINAL_VELOCITY
 
 # Platform Constants
-SPRITE_PATH : str = 'Assets/blocks/platform.png'
 BROKEN_PATH : str = 'Assets/blocks/falling_platform.png'
 PLATFORM_WIDTH : int = 3 * CELL_SIZE
 PLATFORM_HEIGHT : int = CELL_SIZE
@@ -14,9 +13,9 @@ class Platform(Block):
     _falling : bool = False
 
     # Magic Methods
-    def __init__(self, pos : tuple[int, int]):
+    def __init__(self, pos : tuple[int, int], image : pygame.Surface):
         pos = (pos[0] - PLATFORM_WIDTH // 2, pos[1])
-        super().__init__(sprite_path=SPRITE_PATH, pos=pos, width=PLATFORM_WIDTH, height=PLATFORM_HEIGHT)
+        super().__init__(image=image, pos=pos, width=PLATFORM_WIDTH, height=PLATFORM_HEIGHT)
 
     # Accessors/Setters
     @property
