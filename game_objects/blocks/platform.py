@@ -1,9 +1,9 @@
 import pygame
-from block import Block
 from utility.game_constants import CELL_SIZE, GRAVITY_ACC, TERMINAL_VELOCITY
+from game_objects.blocks.block import Block
 
 # Platform Constants
-BROKEN_PATH : str = '../../assets/blocks/falling_platform.png'
+BROKEN_PATH : str = './assets/blocks/falling_platform.png'
 PLATFORM_WIDTH : int = 3 * CELL_SIZE
 PLATFORM_HEIGHT : int = CELL_SIZE
 
