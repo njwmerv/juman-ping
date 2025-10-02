@@ -4,6 +4,7 @@ from utility.image_loader import ImageLoader
 from utility.game_constants import FPS, NAME, SCREEN_WIDTH, SCREEN_HEIGHT
 from game_objects.other.level import Level
 from game_objects.entities.player import Player
+from game_objects.blocks.block_factory import BlockFactory
 
 # Constants
 LEVEL_DATA_BASE_PATH : str = "./assets/levels/"
@@ -21,8 +22,10 @@ class Game:
     window : pygame.Surface
     clock : pygame.time.Clock
     assets : ImageLoader
+    factory : BlockFactory
     level : Level
     player : Player
+    font : pygame.font
 
     def __init__(self):
         # PyGame Setup
@@ -37,12 +40,29 @@ class Game:
         # Load images
         self.assets = ImageLoader()
 
-        self.level = Level(level_data=get_level_data("test"), assets=self.assets)
+        self.factory : BlockFactory = BlockFactory(self.assets)
+
+        self.level = Level(level_data=get_level_data("test"), assets=self.assets, factory=self.factory)
 
         self.player = Player(pos=self.level.start_pos, assets=self.assets)
 
-    def run(self) -> GameState:
-        delta_time: float = self.clock.tick(FPS) / 1000.0
+        self.font = pygame.font.SysFont("arial", 30)
+
+    def run(self, state : GameState) -> GameState:
+        match state:
+            case GameState.WIN: state = self._handle_win()
+            case GameState.PLAY: state = self._handle_game()
+        pygame.display.update()
+        return state
+
+    def __del__(self):
+        pygame.quit()
+
+    # Private Methods
+
+    def _handle_game(self) -> GameState:
+        next_state : GameState = GameState.PLAY
+        delta_time : float = self.clock.tick(FPS) / 1000.0
 
         # Events
         for event in pygame.event.get():
@@ -53,13 +73,21 @@ class Game:
         self.player.move(dt=delta_time, blocks=self.level.find_near_blocks(self.player))  # Movement
 
         # Check win?
+        if self.player.rect.colliderect(self.level.get_goal()):
+            self._handle_win()
+            next_state = GameState.WIN
 
         # Drawing Everything
         self.level.draw(self.window)
         self.player.draw(self.window)
 
-        pygame.display.update()
-        return GameState.PLAY
+        return next_state
 
-    def __del__(self):
-        pygame.quit()
+    def _handle_win(self) -> GameState:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                return GameState.QUIT
+
+        win_text = self.font.render(f"You win!", 1, (0, 0, 0))
+        self.window.blit(win_text, ((SCREEN_WIDTH - win_text.get_width()) // 2, (SCREEN_HEIGHT - win_text.get_height()) // 2))
+        return GameState.PLAY
